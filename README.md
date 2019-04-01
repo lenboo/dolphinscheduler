@@ -2,10 +2,6 @@ Easy Scheduler
 ============
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
-update(2019-03-29 11:30)
-============
-https://analysys.github.io/easyscheduler_docs_cn/   这是文档(未完待续)。现在正在上传代码到github，有点慢！可以下载的时候会告诉大家，请稍作等待！！
-
 > Easy Scheduler for Big Data
 
 **设计特点：** 一个分布式易扩展的可视化DAG工作流任务调度系统。致力于解决数据处理流程中错综复杂的依赖关系，使调度系统在数据处理流程中`开箱即用`。
@@ -29,12 +25,11 @@ https://analysys.github.io/easyscheduler_docs_cn/   这是文档(未完待续)�
 
 ![调度系统对比](http://geek.analysys.cn/static/upload/47/2019-03-01/9609ca82-cf8b-4d91-8dc0-0e2805194747.jpeg)
 
-
 ### 系统部分截图
 
 ![](http://geek.analysys.cn/static/upload/221/2019-03-29/0a9dea80-fb02-4fa5-a812-633b67035ffc.jpeg)
 
-![](http://geek.analysys.cn/static/upload/221/2019-03-29/43489f10-d01c-4fc3-b7b1-6f66405cc621.jpeg)
+![](http://geek.analysys.cn/static/upload/221/2019-04-01/83686def-a54f-4169-8cae-77b1f8300cc1.png)
 
 ![](http://geek.analysys.cn/static/upload/221/2019-03-29/83c937c7-1793-4d7a-aa28-b98460329fe0.jpeg)
 
@@ -47,6 +42,12 @@ https://analysys.github.io/easyscheduler_docs_cn/   这是文档(未完待续)�
 - [**使用手册**](https://analysys.github.io/easyscheduler_docs_cn/系统使用手册.html?_blank "系统使用手册") 
 
 更多文档请参考 <a href="https://analysys.github.io/easyscheduler_docs_cn/" target="_blank">easyscheduler中文在线文档</a>
+
+### 感谢
+
+- Easy Scheduler使用了很多优秀的开源项目，比如google的guava、guice、grpc，netty，ali的bonecp，quartz，以及apache的众多开源项目等等，
+正是由于站在这些开源项目的肩膀上，才有Easy Scheduler的诞生的可能。对此我们对使用的所有开源软件表示非常的感谢！我们也希望自己不仅是开源的受益者，也能成为开源的
+贡献者，于是我们决定把易调度贡献出来，并承诺长期维护。也希望对开源有同样热情和信念的伙伴加入进来，一起为开源献出一份力！
 
 ### 帮助
 The fastest way to get response from our developers is to submit issues,   or add our wechat : 510570367
