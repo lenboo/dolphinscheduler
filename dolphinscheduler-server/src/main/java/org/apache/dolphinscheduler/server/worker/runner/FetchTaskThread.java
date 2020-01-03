@@ -262,12 +262,14 @@ public class FetchTaskThread implements Runnable{
         // remove from zk
         removeNodeFromTaskQueue(taskQueueStr);
 
-        processDao.changeTaskState(ExecutionStatus.FAILURE,
-                taskInstance.getStartTime(),
-                taskInstance.getHost(),
-                null,
-                null,
-                taskInstId);
+        if (taskInstance != null){
+            processDao.changeTaskState(ExecutionStatus.FAILURE,
+                    taskInstance.getStartTime(),
+                    taskInstance.getHost(),
+                    null,
+                    null,
+                    taskInstId);
+        }
 
     }
     /**
