@@ -17,6 +17,7 @@
 package org.apache.dolphinscheduler.server.worker.runner;
 
 import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
 import org.apache.dolphinscheduler.common.queue.ITaskQueue;
 import org.apache.dolphinscheduler.common.thread.Stopper;
 import org.apache.dolphinscheduler.common.thread.ThreadUtils;
@@ -25,6 +26,7 @@ import org.apache.dolphinscheduler.common.utils.FileUtils;
 import org.apache.dolphinscheduler.common.utils.OSUtils;
 import org.apache.dolphinscheduler.common.zk.AbstractZKClient;
 import org.apache.dolphinscheduler.dao.ProcessDao;
+import org.apache.dolphinscheduler.dao.entity.ProcessDefinition;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.dao.entity.Tenant;
 import org.apache.dolphinscheduler.dao.entity.WorkerGroup;
@@ -142,6 +144,8 @@ public class FetchTaskThread implements Runnable{
     public void run() {
         while (Stopper.isRunning()){
             InterProcessMutex mutex = null;
+            String currentTaskQueueStr = null;
+
             try {
                 ThreadPoolExecutor poolExecutor = (ThreadPoolExecutor) workerExecService;
                 //check memory and cpu usage and threads
@@ -167,6 +171,9 @@ public class FetchTaskThread implements Runnable{
                 List<String> taskQueueStrArr = taskQueue.poll(Constants.DOLPHINSCHEDULER_TASKS_QUEUE, taskNum);
 
                 for(String taskQueueStr : taskQueueStrArr){
+
+                    currentTaskQueueStr = taskQueueStr;
+
                     if (StringUtils.isEmpty(taskQueueStr)) {
                         continue;
                     }
@@ -190,13 +197,16 @@ public class FetchTaskThread implements Runnable{
                         continue;
                     }
 
+                    // if process definition is null ,process definition already deleted
+                    int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
+
                     Tenant tenant = processDao.getTenantForProcess(taskInstance.getProcessInstance().getTenantId(),
-                            taskInstance.getProcessDefine().getUserId());
+                            userId);
 
                     // verify tenant is null
                     if (verifyTenantIsNull(tenant)) {
                         logger.warn("remove task queue : {} due to tenant is null", taskQueueStr);
-                        removeNodeFromTaskQueue(taskQueueStr);
+                        processErrorTask(taskQueueStr);
                         continue;
                     }
 
@@ -235,6 +245,7 @@ public class FetchTaskThread implements Runnable{
                 }
 
             }catch (Exception e){
+                processErrorTask(currentTaskQueueStr);
                 logger.error("fetch task thread failure" ,e);
             }finally {
                 AbstractZKClient.releaseMutex(mutex);
@@ -242,6 +253,23 @@ public class FetchTaskThread implements Runnable{
         }
     }
 
+
+    /**
+     * process error task
+     * @param taskQueueStr task queue str
+     */
+    private void processErrorTask(String taskQueueStr){
+        // remove from zk
+        removeNodeFromTaskQueue(taskQueueStr);
+
+        processDao.changeTaskState(ExecutionStatus.FAILURE,
+                taskInstance.getStartTime(),
+                taskInstance.getHost(),
+                null,
+                null,
+                taskInstId);
+
+    }
     /**
      * remove node from task queue
      *
