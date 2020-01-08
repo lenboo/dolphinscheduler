@@ -149,7 +149,8 @@ public class FetchTaskThread implements Runnable{
             try {
                 ThreadPoolExecutor poolExecutor = (ThreadPoolExecutor) workerExecService;
                 //check memory and cpu usage and threads
-                boolean runCheckFlag = OSUtils.checkResource(this.conf, false) && checkThreadCount(poolExecutor);
+                boolean runCheckFlag = OSUtils.checkResource(this.conf, false)
+                        && checkThreadCount(poolExecutor);
 
                 Thread.sleep(Constants.SLEEP_TIME_MILLIS);
 
@@ -158,7 +159,8 @@ public class FetchTaskThread implements Runnable{
                 }
 
                 //whether have tasks, if no tasks , no need lock  //get all tasks
-                List<String> tasksQueueList = taskQueue.getAllTasks(Constants.DOLPHINSCHEDULER_TASKS_QUEUE);
+                List<String> tasksQueueList = taskQueue.getAllTasks(
+                        Constants.DOLPHINSCHEDULER_TASKS_QUEUE);
                 if (CollectionUtils.isEmpty(tasksQueueList)){
                     continue;
                 }
@@ -168,7 +170,8 @@ public class FetchTaskThread implements Runnable{
 
 
                 // task instance id str
-                List<String> taskQueueStrArr = taskQueue.poll(Constants.DOLPHINSCHEDULER_TASKS_QUEUE, taskNum);
+                List<String> taskQueueStrArr = taskQueue.poll(
+                        Constants.DOLPHINSCHEDULER_TASKS_QUEUE, taskNum);
 
                 for(String taskQueueStr : taskQueueStrArr){
 
@@ -200,7 +203,8 @@ public class FetchTaskThread implements Runnable{
                     // if process definition is null ,process definition already deleted
                     int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
 
-                    Tenant tenant = processDao.getTenantForProcess(taskInstance.getProcessInstance().getTenantId(),
+                    Tenant tenant = processDao.getTenantForProcess(
+                            taskInstance.getProcessInstance().getTenantId(),
                             userId);
 
                     // verify tenant is null
@@ -300,10 +304,9 @@ public class FetchTaskThread implements Runnable{
      * @param tenant tenant
      * @return true if tenant is null
      */
-    private boolean verifyTenantIsNull(Tenant tenant) {
+    private Boolean verifyTenantIsNull(Tenant tenant) {
         if(tenant == null){
-            logger.error("tenant not exists,process define id : {},process instance id : {},task instance id : {}",
-                    taskInstance.getProcessDefine().getId(),
+            logger.error("tenant not exists,process instance id : {},task instance id : {}",
                     taskInstance.getProcessInstance().getId(),
                     taskInstance.getId());
             return true;
