@@ -30,6 +30,7 @@ import java.util.Properties;
 
 import static org.apache.dolphinscheduler.common.Constants.COMMON_PROPERTIES_PATH;
 import static org.apache.dolphinscheduler.common.Constants.HADOOP_PROPERTIES_PATH;
+import static org.apache.dolphinscheduler.common.Constants.RUN_CONFIG_PATH;
 
 /**
  * property utils
@@ -51,7 +52,7 @@ public class PropertyUtils {
     }
 
     private void init(){
-        String[] propertyFiles = new String[]{HADOOP_PROPERTIES_PATH,COMMON_PROPERTIES_PATH};
+        String[] propertyFiles = new String[]{HADOOP_PROPERTIES_PATH,COMMON_PROPERTIES_PATH,RUN_CONFIG_PATH};
         for (String fileName : propertyFiles) {
             InputStream fis = null;
             try {

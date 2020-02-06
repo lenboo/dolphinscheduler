@@ -49,6 +49,12 @@ public final class Constants {
     /**
      * common properties path
      */
+    public static final String RUN_CONFIG_PATH = "/config/run_config.conf";
+
+
+    /**
+     * common properties path
+     */
     public static final String COMMON_PROPERTIES_PATH = "/common/common.properties";
 
     /**
