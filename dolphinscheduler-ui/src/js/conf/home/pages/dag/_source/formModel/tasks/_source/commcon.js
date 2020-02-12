@@ -232,12 +232,25 @@ const positionList = [
     code: "Headers"
   }
 ]
-
+/**
+ * node status
+ */
+const nodeStatusList = [
+  {
+    value: 'success',
+    label: `${i18n.$t('success')}`
+  },
+  {
+    value: 'failed',
+    label: `${i18n.$t('failed')}`
+  }
+]
 export {
   cycleList,
   dateValueList,
   typeList,
   directList,
   sqlTypeList,
-  positionList
+  positionList,
+  nodeStatusList
 }

@@ -505,5 +505,7 @@ export default {
   'There is no data for this period of time': 'There is no data for this period of time',
   'IP address cannot be empty': 'IP address cannot be empty',
   'Please enter the correct IP': 'Please enter the correct IP',
-  'Please generate token': 'Please generate token'
+  'Please generate token': 'Please generate token',
+  'Branch flow': 'Branch flow',
+  'Cannot select the same node for successful branch flow and failed branch flow': 'Cannot select the same node for successful branch flow and failed branch flow'
 }
