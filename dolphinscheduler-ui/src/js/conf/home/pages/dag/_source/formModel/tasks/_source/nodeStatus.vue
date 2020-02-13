@@ -106,20 +106,6 @@
           resolve()
         })
       },
-      /**
-       * get processlist
-       */
-      _getProcessList () {
-        return new Promise((resolve, reject) => {
-          this.definitionList = _.map(_.cloneDeep(this.store.state.dag.processListS), v => {
-            return {
-              value: v.id,
-              label: v.name
-            }
-          })
-          resolve()
-        })
-      },
       _getProcessByProjectId (id) {
         return new Promise((resolve, reject) => {
           this.store.dispatch('dag/getProcessByProjectId', { projectId: id }).then(res => {
@@ -149,37 +135,6 @@
           }
         })
       },
-      /**
-       * change process get dependItemList
-       */
-      _onChangeProjectId ({ value }) {
-        this._getProcessByProjectId(value).then(definitionList => {
-          /*this.$set(this.dependItemList, this.itemIndex, this._dlOldParams(value, definitionList, item))*/
-          let definitionId = definitionList[0].id
-          this._getDependItemList(definitionId).then(depTasksList => {
-            let item = this.dependItemList[this.itemIndex]
-            // init set depTasks All
-            item.depTasks = 'ALL'
-            // set dependItemList item data
-            this.$set(this.dependItemList, this.itemIndex, this._cpOldParams(value,definitionId, definitionList,depTasksList, item))
-          })
-        })
-      },
-      _onChangeDefinitionId ({ value }) {
-        // get depItem list data
-        this._getDependItemList(value).then(depTasksList => {
-          let item = this.dependItemList[this.itemIndex]
-          // init set depTasks All
-          item.depTasks = 'ALL'
-          // set dependItemList item data
-          this.$set(this.dependItemList, this.itemIndex, this._rtOldParams(value, depTasksList, item))
-        })
-      },
-      _onChangeCycle ({ value }) {
-        let list = _.cloneDeep(dateValueList[value])
-        this.$set(this.dependItemList[this.itemIndex], 'dateValue', list[0].value)
-        this.$set(this.dependItemList[this.itemIndex], 'dateValueList', list)
-      },
       _rtNewParams () {
         return {
           depTask: '',
@@ -188,28 +143,8 @@
       },
       _rtOldParams (value,depTasksList, item) {
         return {
-          projectId: item.projectId,
-          definitionId: value,
-          depTasks: item.depTasks || 'ALL',
-          depTasksList: depTasksList,
-          cycle: item.cycle,
-          dateValue: item.dateValue,
-          dateValueList: _.cloneDeep(dateValueList[item.cycle]),
-          state: item.state
-        }
-      },
-
-      _cpOldParams (value,definitionId, definitionList,depTasksList, item) {
-        return {
-          projectId: value,
-          definitionList: definitionList,
-          definitionId: definitionId,
-          depTasks: item.depTasks || 'ALL',
-          depTasksList: depTasksList,
-          cycle: item.cycle,
-          dateValue: item.dateValue,
-          dateValueList: _.cloneDeep(dateValueList[item.cycle]),
-          state: item.state
+          depTask: '',
+          status: ''
         }
       },
       /**
@@ -230,8 +165,7 @@
       this._getProjectList().then(() => {
         let projectId = this.projectList[0].value
         if (!this.dependItemList.length) {
-              this.$emit('dependItemListEvent', _.concat(this.dependItemList, this._rtNewParams()))
-           
+            this.$emit('dependItemListEvent', _.concat(this.dependItemList, this._rtNewParams()))
         } else {
           // get definitionId ids
           let ids = _.map(this.dependItemList, v => v.definitionId).join(',')
