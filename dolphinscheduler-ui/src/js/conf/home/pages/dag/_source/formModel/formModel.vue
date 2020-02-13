@@ -284,10 +284,10 @@
         failedNode: 'failed',
         successBranch: '',
         failedBranch: '',
-        conditionResult: [
-          {'successNode': []},
-          {'failedNode': []}
-        ],
+        conditionResult: {
+          'successNode': [],
+          'failedNode': []
+        },
         // dependence
         dependence: {},
         // Current node params data
@@ -439,8 +439,8 @@
         }
 
         $(`#${this.id}`).find('span').text(this.name)
-        this.conditionResult[0].successNode[0] = this.successBranch
-        this.conditionResult[1].failedNode[0] = this.failedBranch
+        this.conditionResult.successNode[0] = this.successBranch
+        this.conditionResult.failedNode[0] = this.failedBranch
         // Store the corresponding node data structure
         this.$emit('addTaskInfo', {
           item: {
@@ -531,8 +531,8 @@
           this.retryInterval = o.retryInterval
           this.workerGroupId = o.workerGroupId
           if(o.conditionResult) {
-            this.successBranch = o.conditionResult[0].successNode[0]
-            this.failedBranch = o.conditionResult[1].failedNode[0]
+            this.successBranch = o.conditionResult.successNode[0]
+            this.failedBranch = o.conditionResult.failedNode[0]
           }
         }
       }
