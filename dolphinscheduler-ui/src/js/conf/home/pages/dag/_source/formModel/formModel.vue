@@ -122,7 +122,7 @@
             </x-select>
             </span>
             <span class="text-b" style="padding-left: 38px">{{$t('Branch flow')}}</span>
-            <x-select style="width: 157px;" v-model="successBranch" :disabled="isDetails">
+            <x-select style="width: 157px;" v-model="successBranch" clearable>
               <x-option v-for="item in rearList" :key="item.value" :value="item.value" :label="item.label">
               </x-option>
             </x-select>
@@ -141,7 +141,7 @@
             </x-select>
             </span>
             <span class="text-b" style="padding-left: 38px">{{$t('Branch flow')}}</span>
-            <x-select style="width: 157px;" v-model="failedBranch" :disabled="isDetails">
+            <x-select style="width: 157px;" v-model="failedBranch" clearable>
               <x-option v-for="item in rearList" :key="item.value" :value="item.value" :label="item.label">
               </x-option>
             </x-select>
