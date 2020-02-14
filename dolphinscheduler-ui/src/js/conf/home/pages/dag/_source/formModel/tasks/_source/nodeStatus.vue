@@ -17,7 +17,7 @@
 <template>
   <div class="dep-list-model">
     <div v-for="(el,$index) in dependItemList" :key='$index' class="list" @click="itemIndex = $index">
-      <x-select style="width: 150px;" v-model="el.depTask" :disabled="isDetails">
+      <x-select style="width: 150px;" v-model="el.depTasks" :disabled="isDetails">
         <x-option v-for="item in preNode" :key="item.value" :value="item.value" :label="item.label">
         </x-option>
       </x-select>
@@ -137,13 +137,13 @@
       },
       _rtNewParams () {
         return {
-          depTask: '',
+          depTasks: '',
           status: ''
         }
       },
       _rtOldParams (value,depTasksList, item) {
         return {
-          depTask: '',
+          depTasks: '',
           status: ''
         }
       },
