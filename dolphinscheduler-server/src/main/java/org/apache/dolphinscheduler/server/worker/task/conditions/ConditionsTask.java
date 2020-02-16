@@ -16,14 +16,54 @@
  */
 package org.apache.dolphinscheduler.server.worker.task.conditions;
 
+import org.apache.dolphinscheduler.common.Constants;
+import org.apache.dolphinscheduler.common.enums.DependResult;
+import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
+import org.apache.dolphinscheduler.common.model.DependentItem;
+import org.apache.dolphinscheduler.common.model.DependentTaskModel;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
+import org.apache.dolphinscheduler.common.task.dependent.DependentParameters;
+import org.apache.dolphinscheduler.common.utils.DependentUtils;
+import org.apache.dolphinscheduler.common.utils.JSONUtils;
+import org.apache.dolphinscheduler.dao.ProcessDao;
+import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
+import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.server.worker.task.AbstractTask;
 import org.apache.dolphinscheduler.server.worker.task.TaskProps;
-import org.apache.zookeeper.server.ExitCode;
 import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionsTask extends AbstractTask {
 
+
+    /**
+     * dependent parameters
+     */
+    private DependentParameters dependentParameters;
+
+    /**
+     * process dao
+     */
+    private ProcessDao processDao;
+
+    /**
+     * taskInstance
+     */
+    private TaskInstance taskInstance;
+
+    /**
+     * processInstance
+     */
+    private ProcessInstance processInstance;
+
+    /**
+     *
+     */
+    private Map<String, ExecutionStatus> completeTaskList = new ConcurrentHashMap<>();
 
     /**
      * constructor
@@ -36,8 +76,52 @@ public class ConditionsTask extends AbstractTask {
     }
 
     @Override
+    public void init() throws Exception {
+        logger.info("conditions task initialize");
+
+        this.dependentParameters = JSONUtils.parseObject(this.taskProps.getDependence(), DependentParameters.class);
+
+        this.taskInstance = processDao.findTaskInstanceById(taskProps.getTaskInstId());
+
+        if(taskInstance == null){
+            throw new Exception("cannot find the task instance!");
+        }
+
+        List<TaskInstance> taskInstanceList = processDao.findValidTaskListByProcessId(taskInstance.getProcessInstanceId());
+        for(TaskInstance task : taskInstanceList){
+            this.completeTaskList.putIfAbsent(task.getName(), task.getState());
+        }
+    }
+
+    @Override
     public void handle() throws Exception {
-        this.exitStatusCode = 1;
+        List<DependResult> modelResultList = new ArrayList<>();
+        for(DependentTaskModel dependentTaskModel : dependentParameters.getDependTaskList()){
+
+            List<DependResult> itemDependResult = new ArrayList<>();
+            for(DependentItem item : dependentTaskModel.getDependItemList()){
+                itemDependResult.add(getDependResultForItem(item));
+            }
+            DependResult modelResult = DependentUtils.getDependResultForRelation(dependentTaskModel.getRelation(), itemDependResult);
+            modelResultList.add(modelResult);
+        }
+        DependResult result = DependentUtils.getDependResultForRelation(
+                dependentParameters.getRelation(), modelResultList
+        );
+        exitStatusCode = (result == DependResult.SUCCESS) ?
+                Constants.EXIT_CODE_SUCCESS : Constants.EXIT_CODE_FAILURE;
+    }
+
+    private DependResult getDependResultForItem(DependentItem item){
+
+        if(!completeTaskList.containsKey(item.getDepTasks())){
+            return DependResult.FAILED;
+        }
+        ExecutionStatus executionStatus = completeTaskList.get(item.getDepTasks());
+        if(executionStatus != item.getStatus()){
+            return DependResult.FAILED;
+        }
+        return DependResult.SUCCESS;
     }
 
     @Override
