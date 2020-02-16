@@ -28,6 +28,7 @@ import org.apache.dolphinscheduler.common.utils.JSONUtils;
 import org.apache.dolphinscheduler.dao.ProcessDao;
 import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
+import org.apache.dolphinscheduler.server.utils.SpringApplicationContext;
 import org.apache.dolphinscheduler.server.worker.task.AbstractTask;
 import org.apache.dolphinscheduler.server.worker.task.TaskProps;
 import org.slf4j.Logger;
@@ -78,6 +79,8 @@ public class ConditionsTask extends AbstractTask {
     @Override
     public void init() throws Exception {
         logger.info("conditions task initialize");
+
+        this.processDao = SpringApplicationContext.getBean(ProcessDao.class);
 
         this.dependentParameters = JSONUtils.parseObject(this.taskProps.getDependence(), DependentParameters.class);
 
