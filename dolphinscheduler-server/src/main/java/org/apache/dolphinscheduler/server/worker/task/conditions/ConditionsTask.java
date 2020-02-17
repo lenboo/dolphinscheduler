@@ -117,14 +117,20 @@ public class ConditionsTask extends AbstractTask {
 
     private DependResult getDependResultForItem(DependentItem item){
 
+        DependResult dependResult = DependResult.SUCCESS;
         if(!completeTaskList.containsKey(item.getDepTasks())){
-            return DependResult.FAILED;
+            logger.info("depend item: {} have not completed yet.", item.getDepTasks());
+            dependResult = DependResult.FAILED;
+            return dependResult;
         }
         ExecutionStatus executionStatus = completeTaskList.get(item.getDepTasks());
         if(executionStatus != item.getStatus()){
-            return DependResult.FAILED;
+            logger.info("depend item : {} expect status: {}, actual status: {}" ,item.getDepTasks(), item.getStatus().toString(), executionStatus.toString());
+            dependResult = DependResult.FAILED;
         }
-        return DependResult.SUCCESS;
+        logger.info("depend item: {}, depend result: {}",
+                item.getDepTasks(), dependResult);
+        return dependResult;
     }
 
     @Override
