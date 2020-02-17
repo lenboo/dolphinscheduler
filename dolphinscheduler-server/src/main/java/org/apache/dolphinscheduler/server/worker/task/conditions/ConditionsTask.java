@@ -98,6 +98,10 @@ public class ConditionsTask extends AbstractTask {
 
     @Override
     public void handle() throws Exception {
+
+        String threadLoggerInfoName = String.format(Constants.TASK_LOG_INFO_FORMAT, taskProps.getTaskAppId());
+        Thread.currentThread().setName(threadLoggerInfoName);
+
         List<DependResult> modelResultList = new ArrayList<>();
         for(DependentTaskModel dependentTaskModel : dependentParameters.getDependTaskList()){
 
