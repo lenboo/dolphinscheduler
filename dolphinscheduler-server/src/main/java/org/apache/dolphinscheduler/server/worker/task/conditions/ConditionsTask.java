@@ -115,6 +115,7 @@ public class ConditionsTask extends AbstractTask {
         DependResult result = DependentUtils.getDependResultForRelation(
                 dependentParameters.getRelation(), modelResultList
         );
+        logger.info("the conditions task depend result : {}", result);
         exitStatusCode = (result == DependResult.SUCCESS) ?
                 Constants.EXIT_CODE_SUCCESS : Constants.EXIT_CODE_FAILURE;
     }
