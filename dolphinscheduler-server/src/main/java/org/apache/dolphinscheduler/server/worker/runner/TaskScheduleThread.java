@@ -208,21 +208,29 @@ public class TaskScheduleThread implements Runnable {
      * @return
      */
     private String getTaskLogPath() {
-        String baseLog = ((TaskLogDiscriminator) ((SiftingAppender) ((LoggerContext) LoggerFactory.getILoggerFactory())
+        String logPath;
+        try{
+            String baseLog = ((TaskLogDiscriminator) ((SiftingAppender) ((LoggerContext) LoggerFactory.getILoggerFactory())
                 .getLogger("ROOT")
                 .getAppender("TASKLOGFILE"))
                 .getDiscriminator()).getLogBase();
         if (baseLog.startsWith(Constants.SINGLE_SLASH)){
-            return baseLog + Constants.SINGLE_SLASH +
+            logPath =  baseLog + Constants.SINGLE_SLASH +
                     taskInstance.getProcessDefinitionId() + Constants.SINGLE_SLASH  +
                     taskInstance.getProcessInstanceId() + Constants.SINGLE_SLASH  +
                     taskInstance.getId() + ".log";
-        }
-        return System.getProperty("user.dir") + Constants.SINGLE_SLASH +
+        }else{
+            logPath = System.getProperty("user.dir") + Constants.SINGLE_SLASH +
                 baseLog +  Constants.SINGLE_SLASH +
                 taskInstance.getProcessDefinitionId() + Constants.SINGLE_SLASH  +
                 taskInstance.getProcessInstanceId() + Constants.SINGLE_SLASH  +
                 taskInstance.getId() + ".log";
+        }
+        }catch (Exception e){
+            logger.error("logger" + e);
+            logPath = "";
+        }
+        return logPath;
     }
 
     /**

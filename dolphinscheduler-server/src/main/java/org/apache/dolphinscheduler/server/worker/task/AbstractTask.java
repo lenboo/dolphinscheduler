@@ -22,7 +22,10 @@ import org.apache.dolphinscheduler.common.enums.TaskRecordStatus;
 import org.apache.dolphinscheduler.common.enums.TaskType;
 import org.apache.dolphinscheduler.common.process.Property;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
+import org.apache.dolphinscheduler.common.task.conditions.ConditionsParameters;
+import org.apache.dolphinscheduler.common.task.dependent.DependentParameters;
 import org.apache.dolphinscheduler.common.task.flink.FlinkParameters;
+import org.apache.dolphinscheduler.common.task.http.HttpParameters;
 import org.apache.dolphinscheduler.common.task.mr.MapreduceParameters;
 import org.apache.dolphinscheduler.common.task.procedure.ProcedureParameters;
 import org.apache.dolphinscheduler.common.task.python.PythonParameters;
@@ -193,6 +196,15 @@ public abstract class AbstractTask {
                 break;
             case PYTHON:
                 paramsClass = PythonParameters.class;
+                break;
+            case DEPENDENT:
+                paramsClass = DependentParameters.class;
+                break;
+            case HTTP:
+                paramsClass = HttpParameters.class;
+                break;
+            case CONDITIONS:
+                paramsClass = ConditionsParameters.class;
                 break;
             default:
                 logger.error("not support this task type: {}", taskType);

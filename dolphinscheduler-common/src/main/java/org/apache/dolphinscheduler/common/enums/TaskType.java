@@ -45,7 +45,8 @@ public enum TaskType {
     PYTHON(6, "python"),
     DEPENDENT(7, "dependent"),
     FLINK(8, "flink"),
-    HTTP(9, "http");
+    HTTP(9, "http"),
+    CONDITIONS(10, "conditions");
 
     TaskType(int code, String descp){
         this.code = code;
