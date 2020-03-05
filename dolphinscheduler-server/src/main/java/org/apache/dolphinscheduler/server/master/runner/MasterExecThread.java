@@ -985,8 +985,10 @@ public class MasterExecThread implements Runnable {
         // submit start node
         submitPostNode(null);
         boolean sendTimeWarning = false;
-        while(!processInstance.IsProcessInstanceStop()){
-
+        while(Stopper.isRunning()){
+            if(processInstance.IsProcessInstanceStop()){
+                break;
+            }
             // send warning email if process time out.
             if( !sendTimeWarning && checkProcessTimeOut(processInstance) ){
                 alertManager.sendProcessTimeoutAlert(processInstance,
@@ -1000,11 +1002,14 @@ public class MasterExecThread implements Runnable {
                 if(!future.isDone()){
                     continue;
                 }
-                // node monitor thread complete
-                activeTaskNode.remove(entry.getKey());
                 if(task == null){
                     this.taskFailedSubmit = true;
+                    activeTaskNode.remove(entry.getKey());
                     continue;
+                }
+                // node monitor thread complete
+                if(task.isTaskComplete()){
+                    activeTaskNode.remove(entry.getKey());
                 }
                 logger.info("task :{}, id:{} complete, state is {} ",
                         task.getName(), task.getId(), task.getState().toString());
