@@ -853,7 +853,8 @@ public class MasterExecThread implements Runnable {
         ProcessInstance instance = processDao.findProcessInstanceById(processInstance.getId());
         ExecutionStatus state = instance.getState();
 
-        if(activeTaskNode.size() > 0){
+        if(activeTaskNode.size() > 0
+                || haveRetryTaskStandBy()){
             return runningState(state);
         }
         // process failure
@@ -894,6 +895,24 @@ public class MasterExecThread implements Runnable {
         }
 
         return state;
+    }
+
+    /**
+     * whether standby task list have retry tasks
+     * @return
+     */
+    private boolean haveRetryTaskStandBy() {
+
+        boolean result = false;
+
+        for(String taskName : readyToSubmitTaskList.keySet()){
+            TaskInstance task = readyToSubmitTaskList.get(taskName);
+            if(task.getState().typeIsFailure()){
+                result = true;
+                break;
+            }
+        }
+        return result;
     }
 
     /**
