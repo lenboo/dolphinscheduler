@@ -1002,6 +1002,7 @@ public class MasterExecThread implements Runnable {
                 if(!future.isDone()){
                     continue;
                 }
+                task = this.processDao.findTaskInstanceById(task.getId());
                 if(task == null){
                     this.taskFailedSubmit = true;
                     activeTaskNode.remove(entry.getKey());
