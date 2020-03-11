@@ -1009,7 +1009,7 @@ public class MasterExecThread implements Runnable {
                     continue;
                 }
                 // node monitor thread complete
-                if(task.isTaskComplete()){
+                if(task.getState().typeIsFinished()){
                     activeTaskNode.remove(entry.getKey());
                 }
                 logger.info("task :{}, id:{} complete, state is {} ",
