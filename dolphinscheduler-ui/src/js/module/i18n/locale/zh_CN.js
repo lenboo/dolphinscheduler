@@ -506,5 +506,6 @@ export default {
   'Please enter the correct IP': '请输入正确的IP',
   'Please generate token': '请生成Token',
   'Branch flow': '分支流转',
-  'Cannot select the same node for successful branch flow and failed branch flow': '成功分支流转和失败分支流转不能选择同一个节点'
+  'Cannot select the same node for successful branch flow and failed branch flow': '成功分支流转和失败分支流转不能选择同一个节点',
+  'Successful branch flow and failed branch flow are required': '成功分支流转和失败分支流转必填',
 }

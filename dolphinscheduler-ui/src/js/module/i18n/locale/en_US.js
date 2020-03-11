@@ -507,5 +507,6 @@ export default {
   'Please enter the correct IP': 'Please enter the correct IP',
   'Please generate token': 'Please generate token',
   'Branch flow': 'Branch flow',
-  'Cannot select the same node for successful branch flow and failed branch flow': 'Cannot select the same node for successful branch flow and failed branch flow'
+  'Cannot select the same node for successful branch flow and failed branch flow': 'Cannot select the same node for successful branch flow and failed branch flow',
+  'Successful branch flow and failed branch flow are required': 'Successful branch flow and failed branch flow are required',
 }
