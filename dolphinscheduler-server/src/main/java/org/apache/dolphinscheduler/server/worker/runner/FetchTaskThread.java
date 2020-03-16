@@ -151,7 +151,6 @@ public class FetchTaskThread implements Runnable{
                 //check memory and cpu usage and threads
                 boolean runCheckFlag = OSUtils.checkResource(this.conf, false)
                         && checkThreadCount(poolExecutor);
-
                 Thread.sleep(Constants.SLEEP_TIME_MILLIS);
 
                 if(!runCheckFlag) {
@@ -352,9 +351,12 @@ public class FetchTaskThread implements Runnable{
      */
     private void waitForTaskInstance()throws Exception{
         int retryTimes = 30;
-        while (taskInstance == null && retryTimes > 0) {
-            Thread.sleep(Constants.SLEEP_TIME_MILLIS);
+        while (Stopper.isRunning()) {
             taskInstance = processDao.findTaskInstanceById(taskInstId);
+            if(taskInstance != null || retryTimes <= 0){
+                break;
+            }
+            Thread.sleep(Constants.SLEEP_TIME_MILLIS);
             retryTimes--;
         }
     }
