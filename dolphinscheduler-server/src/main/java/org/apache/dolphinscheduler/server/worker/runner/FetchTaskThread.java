@@ -21,12 +21,9 @@ import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
 import org.apache.dolphinscheduler.common.queue.ITaskQueue;
 import org.apache.dolphinscheduler.common.thread.Stopper;
 import org.apache.dolphinscheduler.common.thread.ThreadUtils;
-import org.apache.dolphinscheduler.common.utils.CollectionUtils;
-import org.apache.dolphinscheduler.common.utils.FileUtils;
-import org.apache.dolphinscheduler.common.utils.OSUtils;
+import org.apache.dolphinscheduler.common.utils.*;
 import org.apache.dolphinscheduler.common.zk.AbstractZKClient;
 import org.apache.dolphinscheduler.dao.ProcessDao;
-import org.apache.dolphinscheduler.dao.entity.ProcessDefinition;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.dao.entity.Tenant;
 import org.apache.dolphinscheduler.dao.entity.WorkerGroup;
@@ -109,6 +106,26 @@ public class FetchTaskThread implements Runnable{
         this.taskInstance = null;
     }
 
+
+    /**
+     * Check if the task runs on this worker
+     * @param taskQueueStr
+     * @return
+     */
+    private boolean checkWorkerGroup(String taskQueueStr, String hostNumber) {
+
+        String[] taskQueueArray = taskQueueStr.split(Constants.UNDERLINE);
+        if(taskQueueArray.length < 5){
+            logger.warn("there is no worker group information, wrong format task queue array :" + taskQueueStr);
+            return true;
+        }
+        String hostListStr = taskQueueArray[4];
+        if(hostListStr.equals(String.valueOf(Constants.DEFAULT_WORKER_ID))){
+            return true;
+        }
+        return Arrays.asList(hostListStr.split(Constants.COMMA)).contains(hostNumber);
+    }
+
     /**
      * Check if the task runs on this worker
      * @param taskInstance
@@ -146,6 +163,7 @@ public class FetchTaskThread implements Runnable{
             InterProcessMutex mutex = null;
             String currentTaskQueueStr = null;
 
+            String hostNumber = IpUtils.ipToLong(OSUtils.getHost()).toString();
             try {
                 ThreadPoolExecutor poolExecutor = (ThreadPoolExecutor) workerExecService;
                 //check memory and cpu usage and threads
@@ -221,7 +239,7 @@ public class FetchTaskThread implements Runnable{
                     logger.info("worker fetch taskId : {} from queue ", taskInstId);
 
 
-                    if(!checkWorkerGroup(taskInstance, OSUtils.getHost())){
+                    if(!checkWorkerGroup(taskQueueStr, hostNumber)){
                         continue;
                     }
 
