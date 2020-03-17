@@ -206,7 +206,7 @@ public class FetchTaskThread implements Runnable{
                     taskInstId = getTaskInstanceId(taskQueueStr);
 
                     // mainly to wait for the master insert task to succeed
-                    waitForTaskInstance();
+//                    waitForTaskInstance();
 
                     taskInstance = processDao.getTaskInstanceDetailByTaskId(taskInstId);
 
