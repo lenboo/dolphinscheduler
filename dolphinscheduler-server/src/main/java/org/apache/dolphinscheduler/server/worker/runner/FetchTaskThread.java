@@ -34,6 +34,7 @@ import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -154,6 +155,59 @@ public class FetchTaskThread implements Runnable{
         return ipList.contains(host);
     }
 
+    private boolean executeTaskInstance(String taskQueueStr) throws IOException {
+
+        // get task instance id
+        taskInstId = getTaskInstanceId(taskQueueStr);
+
+        taskInstance = processDao.getTaskInstanceDetailByTaskId(taskInstId);
+
+        // verify task instance is null
+        if (verifyTaskInstanceIsNull(taskInstance)) {
+            logger.warn("remove task queue : {} due to taskInstance is null", taskQueueStr);
+            return false;
+        }
+
+        // if process definition is null ,process definition already deleted
+        int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
+
+        Tenant tenant = processDao.getTenantForProcess(
+                taskInstance.getProcessInstance().getTenantId(),
+                userId);
+
+        // verify tenant is null
+        if (verifyTenantIsNull(tenant)) {
+            logger.warn("remove task queue : {} due to tenant is null", taskQueueStr);
+            processErrorTask(taskQueueStr);
+            return false;
+        }
+
+        // set queue for process instance, user-specified queue takes precedence over tenant queue
+        String userQueue = processDao.queryUserQueueByProcessInstanceId(taskInstance.getProcessInstanceId());
+        taskInstance.getProcessInstance().setQueue(StringUtils.isEmpty(userQueue) ? tenant.getQueue() : userQueue);
+        taskInstance.getProcessInstance().setTenantCode(tenant.getTenantCode());
+
+        logger.info("worker fetch taskId : {} from queue ", taskInstId);
+
+        // local execute path
+        String execLocalPath = getExecLocalPath();
+
+        logger.info("task instance  local execute path : {} ", execLocalPath);
+
+        // init task
+        taskInstance.init(OSUtils.getHost(),
+                new Date(),
+                execLocalPath);
+
+        // check and create Linux users
+        FileUtils.createWorkDirAndUserIfAbsent(execLocalPath,
+                tenant.getTenantCode(), logger);
+
+        logger.info("task : {} ready to submit to task scheduler thread",taskInstId);
+        // submit task
+        workerExecService.submit(new TaskScheduleThread(taskInstance, processDao));
+        return  true;
+    }
 
 
 
@@ -193,7 +247,6 @@ public class FetchTaskThread implements Runnable{
                 for(String taskQueueStr : taskQueueStrArr){
 
                     currentTaskQueueStr = taskQueueStr;
-
                     if (StringUtils.isEmpty(taskQueueStr)) {
                         continue;
                     }
@@ -201,65 +254,11 @@ public class FetchTaskThread implements Runnable{
                     if (!checkThreadCount(poolExecutor)) {
                         break;
                     }
-
-                    // get task instance id
-                    taskInstId = getTaskInstanceId(taskQueueStr);
-
-                    // mainly to wait for the master insert task to succeed
-//                    waitForTaskInstance();
-
-                    taskInstance = processDao.getTaskInstanceDetailByTaskId(taskInstId);
-
-                    // verify task instance is null
-                    if (verifyTaskInstanceIsNull(taskInstance)) {
-                        logger.warn("remove task queue : {} due to taskInstance is null", taskQueueStr);
-                        removeNodeFromTaskQueue(taskQueueStr);
-                        continue;
-                    }
-
-                    // if process definition is null ,process definition already deleted
-                    int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
-
-                    Tenant tenant = processDao.getTenantForProcess(
-                            taskInstance.getProcessInstance().getTenantId(),
-                            userId);
-
-                    // verify tenant is null
-                    if (verifyTenantIsNull(tenant)) {
-                        logger.warn("remove task queue : {} due to tenant is null", taskQueueStr);
-                        processErrorTask(taskQueueStr);
-                        continue;
-                    }
-
-                    // set queue for process instance, user-specified queue takes precedence over tenant queue
-                    String userQueue = processDao.queryUserQueueByProcessInstanceId(taskInstance.getProcessInstanceId());
-                    taskInstance.getProcessInstance().setQueue(StringUtils.isEmpty(userQueue) ? tenant.getQueue() : userQueue);
-                    taskInstance.getProcessInstance().setTenantCode(tenant.getTenantCode());
-
-                    logger.info("worker fetch taskId : {} from queue ", taskInstId);
-
-
                     if(!checkWorkerGroup(taskQueueStr, hostNumber)){
                         continue;
                     }
 
-                    // local execute path
-                    String execLocalPath = getExecLocalPath();
-
-                    logger.info("task instance  local execute path : {} ", execLocalPath);
-
-                    // init task
-                    taskInstance.init(OSUtils.getHost(),
-                            new Date(),
-                            execLocalPath);
-
-                    // check and create Linux users
-                    FileUtils.createWorkDirAndUserIfAbsent(execLocalPath,
-                            tenant.getTenantCode(), logger);
-
-                    logger.info("task : {} ready to submit to task scheduler thread",taskInstId);
-                    // submit task
-                    workerExecService.submit(new TaskScheduleThread(taskInstance, processDao));
+                    executeTaskInstance(taskQueueStr);
 
                     // remove node from zk
                     removeNodeFromTaskQueue(taskQueueStr);
