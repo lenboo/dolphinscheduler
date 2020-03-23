@@ -155,57 +155,12 @@ public class FetchTaskThread implements Runnable{
         return ipList.contains(host);
     }
 
-    private boolean executeTaskInstance(String taskQueueStr) throws IOException {
+    private boolean executeTaskInstance(int taskInstId) throws IOException {
 
-        // get task instance id
-        taskInstId = getTaskInstanceId(taskQueueStr);
-
-        taskInstance = processDao.getTaskInstanceDetailByTaskId(taskInstId);
-
-        // verify task instance is null
-        if (verifyTaskInstanceIsNull(taskInstance)) {
-            logger.warn("remove task queue : {} due to taskInstance is null", taskQueueStr);
-            return false;
-        }
-
-        // if process definition is null ,process definition already deleted
-        int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
-
-        Tenant tenant = processDao.getTenantForProcess(
-                taskInstance.getProcessInstance().getTenantId(),
-                userId);
-
-        // verify tenant is null
-        if (verifyTenantIsNull(tenant)) {
-            logger.warn("remove task queue : {} due to tenant is null", taskQueueStr);
-            processErrorTask(taskQueueStr);
-            return false;
-        }
-
-        // set queue for process instance, user-specified queue takes precedence over tenant queue
-        String userQueue = processDao.queryUserQueueByProcessInstanceId(taskInstance.getProcessInstanceId());
-        taskInstance.getProcessInstance().setQueue(StringUtils.isEmpty(userQueue) ? tenant.getQueue() : userQueue);
-        taskInstance.getProcessInstance().setTenantCode(tenant.getTenantCode());
-
-        logger.info("worker fetch taskId : {} from queue ", taskInstId);
-
-        // local execute path
-        String execLocalPath = getExecLocalPath();
-
-        logger.info("task instance  local execute path : {} ", execLocalPath);
-
-        // init task
-        taskInstance.init(OSUtils.getHost(),
-                new Date(),
-                execLocalPath);
-
-        // check and create Linux users
-        FileUtils.createWorkDirAndUserIfAbsent(execLocalPath,
-                tenant.getTenantCode(), logger);
 
         logger.info("task : {} ready to submit to task scheduler thread",taskInstId);
         // submit task
-        workerExecService.submit(new TaskScheduleThread(taskInstance, processDao));
+        workerExecService.submit(new TaskScheduleThread(taskInstId, processDao));
         return  true;
     }
 
@@ -221,11 +176,10 @@ public class FetchTaskThread implements Runnable{
             try {
                 ThreadPoolExecutor poolExecutor = (ThreadPoolExecutor) workerExecService;
                 //check memory and cpu usage and threads
-                boolean runCheckFlag = OSUtils.checkResource(this.conf, false)
-                        && checkThreadCount(poolExecutor);
                 Thread.sleep(Constants.SLEEP_TIME_MILLIS);
 
-                if(!runCheckFlag) {
+                if(!OSUtils.checkResource(this.conf, false)
+                        || !checkThreadCount(poolExecutor)) {
                     continue;
                 }
 
@@ -247,7 +201,13 @@ public class FetchTaskThread implements Runnable{
                 for(String taskQueueStr : taskQueueStrArr){
 
                     currentTaskQueueStr = taskQueueStr;
+
                     if (StringUtils.isEmpty(taskQueueStr)) {
+                        continue;
+                    }
+                    // get task instance id
+                    taskInstId = getTaskInstanceId(taskQueueStr);
+                    if(taskInstId == 0){
                         continue;
                     }
 
@@ -258,7 +218,7 @@ public class FetchTaskThread implements Runnable{
                         continue;
                     }
 
-                    executeTaskInstance(taskQueueStr);
+                    executeTaskInstance(taskInstId);
 
                     // remove node from zk
                     removeNodeFromTaskQueue(taskQueueStr);
@@ -279,6 +239,9 @@ public class FetchTaskThread implements Runnable{
      * @param taskQueueStr task queue str
      */
     private void processErrorTask(String taskQueueStr){
+
+        int taskId = getTaskInstanceId(taskQueueStr);
+        TaskInstance taskInstance = processDao.findTaskInstanceById(taskId);
         // remove from zk
         removeNodeFromTaskQueue(taskQueueStr);
 
@@ -288,7 +251,7 @@ public class FetchTaskThread implements Runnable{
                     taskInstance.getHost(),
                     null,
                     null,
-                    taskInstId);
+                    taskId);
         }
 
     }
@@ -299,47 +262,6 @@ public class FetchTaskThread implements Runnable{
      */
     private void removeNodeFromTaskQueue(String taskQueueStr){
         taskQueue.removeNode(Constants.DOLPHINSCHEDULER_TASKS_QUEUE, taskQueueStr);
-    }
-
-    /**
-     * verify task instance is null
-     * @param taskInstance
-     * @return true if task instance is null
-     */
-    private boolean verifyTaskInstanceIsNull(TaskInstance taskInstance) {
-        if (taskInstance == null ) {
-            logger.error("task instance is null. task id : {} ", taskInstId);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * verify tenant is null
-     *
-     * @param tenant tenant
-     * @return true if tenant is null
-     */
-    private Boolean verifyTenantIsNull(Tenant tenant) {
-        if(tenant == null){
-            logger.error("tenant not exists,process instance id : {},task instance id : {}",
-                    taskInstance.getProcessInstance().getId(),
-                    taskInstance.getId());
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * get execute local path
-     *
-     * @return execute local path
-     */
-    private String getExecLocalPath(){
-        return FileUtils.getProcessExecDir(taskInstance.getProcessDefine().getProjectId(),
-                taskInstance.getProcessDefine().getId(),
-                taskInstance.getProcessInstance().getId(),
-                taskInstance.getId());
     }
 
     /**
@@ -385,6 +307,7 @@ public class FetchTaskThread implements Runnable{
      * @return task instance id
      */
     private int getTaskInstanceId(String taskQueueStr){
+
         return Integer.parseInt(taskQueueStr.split(Constants.UNDERLINE)[3]);
     }
 }

@@ -20,6 +20,7 @@ package org.apache.dolphinscheduler.server.worker.runner;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.sift.SiftingAppender;
 import com.alibaba.fastjson.JSONObject;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.dolphinscheduler.common.Constants;
 import org.apache.dolphinscheduler.common.enums.ExecutionStatus;
 import org.apache.dolphinscheduler.common.enums.TaskType;
@@ -27,12 +28,11 @@ import org.apache.dolphinscheduler.common.model.TaskNode;
 import org.apache.dolphinscheduler.common.process.Property;
 import org.apache.dolphinscheduler.common.task.AbstractParameters;
 import org.apache.dolphinscheduler.common.task.TaskTimeoutParameter;
-import org.apache.dolphinscheduler.common.utils.CommonUtils;
-import org.apache.dolphinscheduler.common.utils.HadoopUtils;
-import org.apache.dolphinscheduler.common.utils.TaskParametersUtils;
+import org.apache.dolphinscheduler.common.utils.*;
 import org.apache.dolphinscheduler.dao.ProcessDao;
 import org.apache.dolphinscheduler.dao.entity.ProcessInstance;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
+import org.apache.dolphinscheduler.dao.entity.Tenant;
 import org.apache.dolphinscheduler.server.utils.LoggerUtils;
 import org.apache.dolphinscheduler.server.worker.log.TaskLogDiscriminator;
 import org.apache.dolphinscheduler.server.worker.task.AbstractTask;
@@ -73,20 +73,70 @@ public class TaskScheduleThread implements Runnable {
     private AbstractTask task;
 
     /**
+     * task instance id
+     */
+    private int taskInstanceId;
+
+    /**
      * constructor
      *
-     * @param taskInstance  task instance
+     * @param taskInstanceId  task instance id
      * @param processDao    process dao
      */
-    public TaskScheduleThread(TaskInstance taskInstance, ProcessDao processDao){
+    public TaskScheduleThread(int taskInstanceId, ProcessDao processDao){
         this.processDao = processDao;
-        this.taskInstance = taskInstance;
+        this.taskInstanceId = taskInstanceId;
+    }
+
+
+    private boolean initTaskInstance() throws IOException {
+
+        this.taskInstance.setStartTime(new Date());
+        this.taskInstance.setHost(OSUtils.getHost());
+
+        this.taskInstance = processDao.getTaskInstanceDetailByTaskId(taskInstanceId);
+        // if process definition is null ,process definition already deleted
+        int userId = taskInstance.getProcessDefine() == null ? 0 : taskInstance.getProcessDefine().getUserId();
+
+        Tenant tenant = processDao.getTenantForProcess(
+                taskInstance.getProcessInstance().getTenantId(),
+                userId);
+
+        // verify tenant is null
+        if (tenant == null) {
+            processDao.changeTaskState(ExecutionStatus.FAILURE,
+                        taskInstance.getStartTime(),
+                        taskInstance.getHost(),
+                        null,
+                        null,
+                        taskInstance.getId());
+            logger.warn("task id:{} name:{} run failed due to tenant is null", taskInstance.getId(), taskInstance.getName());
+            return false;
+        }
+
+        // set queue for process instance, user-specified queue takes precedence over tenant queue
+        String userQueue = processDao.queryUserQueueByProcessInstanceId(taskInstance.getProcessInstanceId());
+        taskInstance.getProcessInstance().setQueue(StringUtils.isEmpty(userQueue) ? tenant.getQueue() : userQueue);
+        taskInstance.getProcessInstance().setTenantCode(tenant.getTenantCode());
+
+        // local execute path
+        String execLocalPath = getExecLocalPath();
+        this.taskInstance.setExecutePath(execLocalPath);
+        logger.info("task instance  local execute path : {} ", execLocalPath);
+        // check and create Linux users
+        FileUtils.createWorkDirAndUserIfAbsent(execLocalPath,
+                tenant.getTenantCode(), logger);
+        return true;
     }
 
     @Override
     public void run() {
 
         try {
+
+            if(!initTaskInstance()){
+                return;
+            }
             // update task state is running according to task type
             updateTaskState(taskInstance.getTaskType());
 
@@ -184,23 +234,18 @@ public class TaskScheduleThread implements Runnable {
      * @param taskType
      */
     private void updateTaskState(String taskType) {
-        // update task status is running
+
+        String excutePath = getTaskLogPath();
         if(taskType.equals(TaskType.SQL.name())  ||
-                taskType.equals(TaskType.PROCEDURE.name())){
-            processDao.changeTaskState(ExecutionStatus.RUNNING_EXEUTION,
-                    taskInstance.getStartTime(),
-                    taskInstance.getHost(),
-                    null,
-                    getTaskLogPath(),
-                    taskInstance.getId());
-        }else{
-            processDao.changeTaskState(ExecutionStatus.RUNNING_EXEUTION,
-                    taskInstance.getStartTime(),
-                    taskInstance.getHost(),
-                    taskInstance.getExecutePath(),
-                    getTaskLogPath(),
-                    taskInstance.getId());
+                    taskType.equals(TaskType.PROCEDURE.name())){
+            excutePath = null;
         }
+        processDao.changeTaskState(ExecutionStatus.RUNNING_EXEUTION,
+                taskInstance.getStartTime(),
+                taskInstance.getHost(),
+                excutePath,
+                getTaskLogPath(),
+                taskInstance.getId());
     }
 
     /**
@@ -264,6 +309,18 @@ public class TaskScheduleThread implements Runnable {
 
             }
         }
+    }
+
+    /**
+     * get execute local path
+     *
+     * @return execute local path
+     */
+    private String getExecLocalPath(){
+        return FileUtils.getProcessExecDir(taskInstance.getProcessDefine().getProjectId(),
+                taskInstance.getProcessDefine().getId(),
+                taskInstance.getProcessInstance().getId(),
+                taskInstance.getId());
     }
 
 
