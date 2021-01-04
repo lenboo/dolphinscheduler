@@ -54,6 +54,7 @@
       </div>
       <div class="list" style="margin-top: 10px;">
         <x-button type="primary" shape="circle" size="large" :loading="spinnerLoading" long @click="_ok">{{spinnerLoading ? 'Loading...' : ` ${$t('Login')} `}} </x-button>
+        please mail to dailidong66@gmail.com for demo account or 中国用户请优先联系微信: dailidong66 开通试用账号，谢谢！
       </div>
     </div>
   </div>
@@ -90,7 +91,7 @@
                 sessionStorage.setItem("sessionId", sessionId)
                 cookies.set('sessionId', sessionId,{ path: '/' })
               }
-              
+
               if (this.userName === 'admin') {
                 window.location.href = `${PUBLIC_PATH}/#/security/tenant`
               } else {

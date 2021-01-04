@@ -251,6 +251,9 @@ public enum Status {
 
     QUEUE_COUNT_ERROR(90001,"queue count error", "查询队列数据错误"),
 
+
+
+    ONLY_ADMIN_PERMIT(999999,"only for administrator in demo!", "demo页面只有管理员才有的功能"),
     KERBEROS_STARTUP_STATE(100001,"get kerberos startup state error", "获取kerberos启动状态错误"),
     ;
 
