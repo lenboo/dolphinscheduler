@@ -301,7 +301,7 @@ public class SchedulerService extends BaseService {
         Map<String, Object> result = new HashMap<String, Object>(5);
 
         Project project = projectMapper.queryByName(projectName);
-        if(!checkAdmin(loginUser, result)){
+        if(checkAdmin(loginUser, result)){
             putMsg(result, Status.ONLY_ADMIN_PERMIT);
             return result;
         }
