@@ -269,6 +269,10 @@ public final class Constants {
      */
     public static final String YYYY_MM_DD_HH_MM_SS = "yyyy-MM-dd HH:mm:ss";
 
+    /**
+     * date format of yyyy-MM-dd HH:mm:ss.fff
+     */
+    public static final String YYYY_MM_DD_HH_MM_SS_FFF = "yyyy-MM-dd HH:mm:ss.fff";
 
     /**
      * date format of yyyyMMddHHmmss

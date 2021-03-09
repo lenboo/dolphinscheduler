@@ -201,8 +201,8 @@ public class TaskRecordDao {
         taskRecord.setProcId(resultSet.getInt("PROC_ID"));
         taskRecord.setProcName(resultSet.getString("PROC_NAME"));
         taskRecord.setProcDate(resultSet.getString("PROC_DATE"));
-        taskRecord.setStartTime(DateUtils.stringToDate(resultSet.getString("STARTDATE")));
-        taskRecord.setEndTime(DateUtils.stringToDate(resultSet.getString("ENDDATE")));
+        taskRecord.setStartTime(DateUtils.parse(resultSet.getString("STARTDATE"), Constants.YYYY_MM_DD_HH_MM_SS_FFF));
+        taskRecord.setEndTime(DateUtils.parse(resultSet.getString("ENDDATE"), Constants.YYYY_MM_DD_HH_MM_SS_FFF));
         taskRecord.setResult(resultSet.getString("RESULT"));
         taskRecord.setDuration(resultSet.getInt("DURATION"));
         taskRecord.setNote(resultSet.getString("NOTE"));
