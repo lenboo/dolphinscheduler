@@ -402,7 +402,7 @@ public final class Constants {
      *
      * rpc port
      */
-    public static final int RPC_PORT = 50051;
+    public static final int RPC_PORT = 50052;
 
     /**
      * forbid running task
