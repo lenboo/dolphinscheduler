@@ -57,13 +57,11 @@
         </x-select>
       </div>
       <div class="list">
-        <x-datepicker
-                v-model="searchParams.taskDate"
-                @on-change="_onChangeDate"
-                format="YYYY-MM-DD"
-                :panelNum="1">
-          <x-input slot="input" readonly slot-scope="{value}" style="width: 130px;" :value="value" size="small" :placeholder="$t('Date')"></x-input>
-        </x-datepicker>
+                <!--v-model="searchParams.taskDate"-->
+
+                <!--format="YYYY-MM-DD"-->
+                <!--:panelNum="1">-->
+          <x-input v-model="searchParams.taskDate" @on-change="_onChangeDate" style="width: 130px;" size="small" :placeholder="$t('Date')"></x-input>
       </div>
       <div class="list">
         <x-input v-model="searchParams.taskName" style="width: 130px;" size="small" :placeholder="$t('Task Name')"></x-input>
