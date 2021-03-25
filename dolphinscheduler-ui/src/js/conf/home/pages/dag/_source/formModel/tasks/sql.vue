@@ -56,7 +56,7 @@
         </div>
       </m-list-box>
       <m-list-box>
-        <div slot="text"><strong class='requiredIcon'>*</strong>{{$t('Recipient')}}</div>
+        <div slot="text">{{$t('Recipient')}}</div>
         <div slot="content">
           <m-email ref="refEmail" v-model="receivers" :disabled="isDetails" :repeat-data="receiversCc"></m-email>
         </div>
@@ -251,10 +251,10 @@
           this.$message.warning(`${i18n.$t('Mail subject required')}`)
           return false
         }
-        if (this.sqlType==0 && !this.receivers.length) {
-          this.$message.warning(`${i18n.$t('Recipient required')}`)
-          return false
-        }
+        // if (this.sqlType==0 && !this.receivers.length) {
+        //   this.$message.warning(`${i18n.$t('Recipient required')}`)
+        //   return false
+        // }
         // receivers Subcomponent verification
         if (this.sqlType==0 && !this.$refs.refEmail._manualEmail()) {
           return false
