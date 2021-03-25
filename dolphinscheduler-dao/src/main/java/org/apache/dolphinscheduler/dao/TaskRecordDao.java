@@ -123,7 +123,7 @@ public class TaskRecordDao {
 
         Object end = filterMap.get("endTime");
         if (end != null && StringUtils.isNotEmpty(end.toString())) {
-            result += " and ENDDATE>='" + end.toString() + "'";
+            result += " and ENDDATE<='" + end.toString() + "'";
         }
         return result;
     }
@@ -171,7 +171,7 @@ public class TaskRecordDao {
      */
     public static List<TaskRecord> queryAllTaskRecord(Map<String, String> filterMap, String table) {
 
-        String sql = String.format("select * from  %s", table);
+        String sql = String.format("select * from %s", table);
         sql += getWhereString(filterMap);
 
         int offset = Integer.parseInt(filterMap.get("offset"));
