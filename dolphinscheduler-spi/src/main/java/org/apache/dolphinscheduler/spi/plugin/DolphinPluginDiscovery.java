@@ -36,6 +36,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
 import org.objectweb.asm.ClassReader;
@@ -49,8 +50,15 @@ import com.google.common.io.ByteStreams;
  * The role of this class is to load the plugin class during development
  */
 final class DolphinPluginDiscovery {
+    // Windows: \target\classes, Unix-like: /target/classes
+    private static final String ARTIFACT_DIR = new StringJoiner(File.separator, File.separator, "")
+            .add("target").add("classes").toString();
     private static final String JAVA_CLASS_FILE_SUFFIX = ".class";
-    private static final String PLUGIN_SERVICES_FILE = "META-INF/services/" + DolphinSchedulerPlugin.class.getName();
+
+    // Windows: "META-INF\services\" + DolphinSchedulerPlugin.class.getName()
+    // Unix-like: "META-INF/services/" + DolphinSchedulerPlugin.class.getName()
+    private static final String PLUGIN_SERVICES_FILE = String.join(File.separator, "META-INF",
+            "services", DolphinSchedulerPlugin.class.getName());
 
     private DolphinPluginDiscovery() {
     }
@@ -62,7 +70,7 @@ final class DolphinPluginDiscovery {
         }
 
         File file = artifact.getFile();
-        if (!file.getPath().endsWith("/target/classes")) {
+        if (!file.getPath().endsWith(ARTIFACT_DIR)) {
             throw new RuntimeException("Unexpected file for main artifact: " + file);
         }
         if (!file.isDirectory()) {
@@ -97,7 +105,7 @@ final class DolphinPluginDiscovery {
             public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
                 if (file.getFileName().toString().endsWith(JAVA_CLASS_FILE_SUFFIX)) {
                     String name = file.subpath(base.getNameCount(), file.getNameCount()).toString();
-                    list.add(javaName(name.substring(0, name.length() - JAVA_CLASS_FILE_SUFFIX.length())));
+                    list.add(convertClassName(name.substring(0, name.length() - JAVA_CLASS_FILE_SUFFIX.length())));
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -134,5 +142,9 @@ final class DolphinPluginDiscovery {
 
     private static String javaName(String binaryName) {
         return binaryName.replace('/', '.');
+    }
+
+    private static String convertClassName(String pathName) {
+        return pathName.replace(File.separatorChar, '.');
     }
 }
