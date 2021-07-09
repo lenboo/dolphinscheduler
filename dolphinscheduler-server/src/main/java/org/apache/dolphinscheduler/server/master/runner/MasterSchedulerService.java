@@ -31,6 +31,8 @@ import org.apache.dolphinscheduler.server.master.registry.MasterRegistryClient;
 import org.apache.dolphinscheduler.service.alert.ProcessAlertManager;
 import org.apache.dolphinscheduler.service.process.ProcessService;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -41,8 +43,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+
 /**
- *  master scheduler thread
+ * master scheduler thread
  */
 @Service
 public class MasterSchedulerService extends Thread {
@@ -77,7 +85,7 @@ public class MasterSchedulerService extends Thread {
     private ProcessAlertManager processAlertManager;
 
     /**
-     *  netty remoting client
+     * netty remoting client
      */
     private NettyRemotingClient nettyRemotingClient;
 
@@ -86,15 +94,21 @@ public class MasterSchedulerService extends Thread {
      */
     private ThreadPoolExecutor masterExecService;
 
+    private ConcurrentHashMap<Integer, MasterExecThread> processInstanceExecMaps ;
+    private ConcurrentHashMap<Integer, MasterExecThread> eventHandlerMap = new ConcurrentHashMap();
+    ListeningExecutorService listeningExecutorService;
 
     /**
      * constructor of MasterSchedulerService
      */
-    @PostConstruct
-    public void init() {
-        this.masterExecService = (ThreadPoolExecutor)ThreadUtils.newDaemonFixedThreadExecutor("Master-Exec-Thread", masterConfig.getMasterExecThreads());
+    public void init(ConcurrentHashMap<Integer, MasterExecThread> processInstanceExecMaps) {
+        this.processInstanceExecMaps = processInstanceExecMaps;
+        this.masterExecService = (ThreadPoolExecutor) ThreadUtils.newDaemonFixedThreadExecutor("Master-Exec-Thread", masterConfig.getMasterExecThreads());
         NettyClientConfig clientConfig = new NettyClientConfig();
         this.nettyRemotingClient = new NettyRemotingClient(clientConfig);
+
+        ExecutorService eventService = ThreadUtils.newDaemonFixedThreadExecutor("MasterEventExecution", masterConfig.getMasterExecThreads());
+        listeningExecutorService = MoreExecutors.listeningDecorator(eventService);
     }
 
     @Override
@@ -136,14 +150,44 @@ public class MasterSchedulerService extends Thread {
                     scheduleProcess();
                 }*/
                 scheduleProcess();
+                eventHandler();
             } catch (Exception e) {
                 logger.error("master scheduler thread error", e);
             }
         }
     }
 
-    private void scheduleProcess() throws Exception {
 
+    private void eventHandler() {
+        for (MasterExecThread masterExecThread : this.processInstanceExecMaps.values()) {
+
+            if (masterExecThread.eventSize() == 0) {
+                continue;
+            }
+            if (this.eventHandlerMap.contains(masterExecThread.getProcessInstance().getId())) {
+                return;
+            }
+            eventHandlerMap.put(masterExecThread.getProcessInstance().getId(), masterExecThread);
+            ListenableFuture future = this.listeningExecutorService.submit(masterExecThread);
+            FutureCallback futureCallback = new FutureCallback() {
+                @Override
+                public void onSuccess(Object o) {
+                    if (masterExecThread.workFlowFinish()) {
+                        eventHandlerMap.remove(masterExecThread.getProcessInstance().getId());
+                    }
+                    eventHandlerMap.remove(masterExecThread.getProcessInstance().getId());
+                }
+
+                @Override
+                public void onFailure(Throwable throwable) {
+                }
+            };
+            Futures.addCallback(future, futureCallback, this.listeningExecutorService);
+        }
+    }
+
+
+    private void scheduleProcess() throws Exception {
         try {
             masterRegistryClient.blockAcquireMutex();
 
@@ -151,7 +195,7 @@ public class MasterSchedulerService extends Thread {
             // make sure to scan and delete command  table in one transaction
             Command command = processService.findOneCommand();
             if (command != null) {
-                logger.info("find one command: id: {}, type: {}", command.getId(),command.getCommandType());
+                logger.info("find one command: id: {}, type: {}", command.getId(), command.getCommandType());
 
                 try {
 
@@ -160,13 +204,15 @@ public class MasterSchedulerService extends Thread {
                             this.masterConfig.getMasterExecThreads() - activeCount, command);
                     if (processInstance != null) {
                         logger.info("start master exec thread , split DAG ...");
-                        masterExecService.execute(
-                                new MasterExecThread(
-                                        processInstance
-                                        , processService
-                                        , nettyRemotingClient
-                                        , processAlertManager
-                                        , masterConfig));
+                        MasterExecThread masterExecThread = new MasterExecThread(
+                                processInstance
+                                , processService
+                                , nettyRemotingClient
+                                , processAlertManager
+                                , masterConfig);
+
+                        this.processInstanceExecMaps.put(processInstance.getId(), masterExecThread);
+                        masterExecService.execute(masterExecThread);
                     }
                 } catch (Exception e) {
                     logger.error("scan command error ", e);

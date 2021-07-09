@@ -993,6 +993,39 @@ public class ProcessService {
     }
 
     /**
+     * retry submit task to db
+     * @param taskInstance
+     * @param commitRetryTimes
+     * @param commitInterval
+     * @return
+     */
+    public boolean submitTask(TaskInstance taskInstance, int commitRetryTimes, int commitInterval){
+
+        int retryTimes = 1;
+        boolean submitDB = false;
+        TaskInstance task = null;
+        while (retryTimes <= commitRetryTimes) {
+            try {
+                if (!submitDB) {
+                    // submit task to db
+                    task = submitTask(taskInstance);
+                    if (task != null && task.getId() != 0) {
+                        submitDB = true;
+                    }
+                }
+                if (!submitDB) {
+                    logger.error("task commit to db failed , taskId {} has already retry {} times, please check the database", taskInstance.getId(), retryTimes);
+                }
+                Thread.sleep(commitInterval);
+            } catch (Exception e) {
+                logger.error("task commit to mysql failed", e);
+            }
+            retryTimes += 1;
+        }
+        return true;
+    }
+
+    /**
      * submit task to db
      * submit sub process to command
      *

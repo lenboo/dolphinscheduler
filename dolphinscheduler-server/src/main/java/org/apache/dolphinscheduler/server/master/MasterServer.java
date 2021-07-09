@@ -28,9 +28,14 @@ import org.apache.dolphinscheduler.server.master.processor.TaskAckProcessor;
 import org.apache.dolphinscheduler.server.master.processor.TaskKillResponseProcessor;
 import org.apache.dolphinscheduler.server.master.processor.TaskResponseProcessor;
 import org.apache.dolphinscheduler.server.master.registry.MasterRegistryClient;
+import org.apache.dolphinscheduler.server.master.runner.MasterExecThread;
 import org.apache.dolphinscheduler.server.master.runner.MasterSchedulerService;
 import org.apache.dolphinscheduler.service.bean.SpringApplicationContext;
 import org.apache.dolphinscheduler.service.quartz.QuartzExecutors;
+
+import org.apache.orc.impl.HadoopShims.TextReaderShim;
+
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
 
@@ -91,6 +96,8 @@ public class MasterServer implements IStoppable {
      */
     @Autowired
     private MasterSchedulerService masterSchedulerService;
+    private ConcurrentHashMap<Integer, MasterExecThread> processInstanceExecMaps = new ConcurrentHashMap<>();
+
 
     /**
      * master server startup, not use web service
@@ -111,8 +118,8 @@ public class MasterServer implements IStoppable {
         NettyServerConfig serverConfig = new NettyServerConfig();
         serverConfig.setListenPort(masterConfig.getListenPort());
         this.nettyRemotingServer = new NettyRemotingServer(serverConfig);
-        this.nettyRemotingServer.registerProcessor(CommandType.TASK_EXECUTE_RESPONSE, new TaskResponseProcessor());
-        this.nettyRemotingServer.registerProcessor(CommandType.TASK_EXECUTE_ACK, new TaskAckProcessor());
+        this.nettyRemotingServer.registerProcessor(CommandType.TASK_EXECUTE_RESPONSE, new TaskResponseProcessor(processInstanceExecMaps));
+        this.nettyRemotingServer.registerProcessor(CommandType.TASK_EXECUTE_ACK, new TaskAckProcessor(processInstanceExecMaps));
         this.nettyRemotingServer.registerProcessor(CommandType.TASK_KILL_RESPONSE, new TaskKillResponseProcessor());
         this.nettyRemotingServer.start();
 
@@ -121,6 +128,7 @@ public class MasterServer implements IStoppable {
         this.masterRegistryClient.setRegistryStoppable(this);
 
         // scheduler start
+        this.masterSchedulerService.init(this.processInstanceExecMaps);
         this.masterSchedulerService.start();
 
         // start QuartzExecutors

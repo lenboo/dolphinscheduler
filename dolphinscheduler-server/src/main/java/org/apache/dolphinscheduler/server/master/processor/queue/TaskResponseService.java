@@ -23,11 +23,14 @@ import org.apache.dolphinscheduler.common.thread.Stopper;
 import org.apache.dolphinscheduler.dao.entity.TaskInstance;
 import org.apache.dolphinscheduler.remote.command.DBTaskAckCommand;
 import org.apache.dolphinscheduler.remote.command.DBTaskResponseCommand;
+import org.apache.dolphinscheduler.server.master.runner.MasterExecThread;
+import org.apache.dolphinscheduler.server.master.runner.task.StateEvent;
 import org.apache.dolphinscheduler.service.process.ProcessService;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.annotation.PostConstruct;
@@ -85,6 +88,10 @@ public class TaskResponseService {
                 this.persist(event);
             }
         }
+    }
+    private ConcurrentHashMap<Integer, MasterExecThread> processInstanceMapper;
+    public void init(ConcurrentHashMap<Integer, MasterExecThread> processInstanceMapper){
+        this.processInstanceMapper = processInstanceMapper;
     }
 
     /**
@@ -179,6 +186,15 @@ public class TaskResponseService {
                 break;
             default:
                 throw new IllegalArgumentException("invalid event type : " + event);
+        }
+
+        MasterExecThread masterExecThread = this.processInstanceMapper.get(taskResponseEvent.getProcessId());
+        if(masterExecThread != null){
+            StateEvent stateEvent = new StateEvent();
+            stateEvent.setProcessInstanceId(taskResponseEvent.getProcessId());
+            stateEvent.setTaskInstanceId(taskResponseEvent.getTaskInstanceId());
+            stateEvent.setType("task");
+            masterExecThread.addStateEvent(stateEvent);
         }
     }
 
