@@ -132,6 +132,9 @@ public class Command {
     @TableField("dry_run")
     private int dryRun;
 
+    @TableField("process_instance_id")
+    private int processInstanceId;
+
     public Command() {
         this.taskDependType = TaskDependType.TASK_POST;
         this.failureStrategy = FailureStrategy.CONTINUE;
@@ -398,6 +401,14 @@ public class Command {
                 + ", environmentCode='" + environmentCode + '\''
                 + ", dryRun='" + dryRun + '\''
                 + '}';
+    }
+
+    public int getProcessInstanceId() {
+        return processInstanceId;
+    }
+
+    public void setProcessInstanceId(int processInstanceId) {
+        this.processInstanceId = processInstanceId;
     }
 }
 

@@ -227,6 +227,7 @@ public class WorkflowExecuteThread implements Runnable {
     @Override
     public void run() {
         try {
+            logger.info("start run work flow :{} ...!!", processInstance.getId());
             startProcess();
             handleEvents();
         } catch (Exception e) {
@@ -288,7 +289,7 @@ public class WorkflowExecuteThread implements Runnable {
     }
 
     private boolean stateEventHandler(StateEvent stateEvent) {
-        logger.info("process event: {}", stateEvent.toString());
+        logger.info("event handler start: process:{} event: {}", stateEvent.toString());
 
         if (!checkStateEvent(stateEvent)) {
             return false;
@@ -311,6 +312,7 @@ public class WorkflowExecuteThread implements Runnable {
                 break;
         }
 
+        logger.info("event handler end: process:{} event: {}", stateEvent.toString());
         if (result) {
             this.stateEvents.remove(stateEvent);
         }
@@ -485,10 +487,120 @@ public class WorkflowExecuteThread implements Runnable {
     private void startProcess() throws Exception {
         if (this.taskInstanceHashMap.size() == 0) {
             isStart = false;
+
+            initProcessParams();
             buildFlowDag();
             initTaskQueue();
             submitPostNode(null);
             isStart = true;
+        }
+    }
+
+    private void initProcessParams() {
+
+        Map<String, String> cmdParam =  new HashMap<>();
+        CommandType commandType = processInstance.getCmdTypeIfComplement();
+        //reset command parameter
+        if (processInstance.getCommandParam() != null) {
+            Map<String, String> processCmdParam = JSONUtils.toMap(processInstance.getCommandParam());
+            for (Map.Entry<String, String> entry : processCmdParam.entrySet()) {
+                if (!cmdParam.containsKey(entry.getKey())) {
+                    cmdParam.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        if (Boolean.FALSE.equals(processService.checkCmdParam(processInstance.getTaskDependType(), cmdParam))) {
+            logger.error("command parameter check failed!");
+        }
+        if (cmdParam != null) {
+
+            // reset global params while repeat running is needed by cmdParam
+            if (commandType == CommandType.REPEAT_RUNNING) {
+                processService.setGlobalParamIfCommanded(processDefinition, cmdParam);
+                // Recalculate global parameters after rerun.
+                processInstance.setGlobalParams(ParameterUtils.curingGlobalParams(
+                        processDefinition.getGlobalParamMap(),
+                        processDefinition.getGlobalParamList(),
+                        commandType,
+                        processInstance.getScheduleTime()));
+            }
+        }
+
+        int runTime = processInstance.getRunTimes();
+        switch (commandType) {
+            case START_PROCESS:
+                break;
+            case START_FAILURE_TASK_PROCESS:
+                // find failed tasks and init these tasks
+                List<Integer> failedList = processService.findTaskIdByInstanceState(processInstance.getId(), ExecutionStatus.FAILURE);
+                List<Integer> toleranceList = processService.findTaskIdByInstanceState(processInstance.getId(), ExecutionStatus.NEED_FAULT_TOLERANCE);
+                List<Integer> killedList = processService.findTaskIdByInstanceState(processInstance.getId(), ExecutionStatus.KILL);
+                cmdParam.remove(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING);
+
+                failedList.addAll(killedList);
+                failedList.addAll(toleranceList);
+                for (Integer taskId : failedList) {
+                    processService.initTaskInstance(processService.findTaskInstanceById(taskId));
+                }
+                cmdParam.put(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING,
+                        String.join(Constants.COMMA, processService.convertIntListToString(failedList)));
+                processInstance.setCommandParam(JSONUtils.toJsonString(cmdParam));
+                processInstance.setRunTimes(runTime + 1);
+                break;
+            case START_CURRENT_TASK_PROCESS:
+                break;
+            case RECOVER_WAITING_THREAD:
+                break;
+            case RECOVER_SUSPENDED_PROCESS:
+                // find pause tasks and init task's state
+                cmdParam.remove(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING);
+                List<Integer> suspendedNodeList = processService.findTaskIdByInstanceState(processInstance.getId(), ExecutionStatus.PAUSE);
+                List<Integer> stopNodeList = processService.findTaskIdByInstanceState(processInstance.getId(),
+                        ExecutionStatus.KILL);
+                suspendedNodeList.addAll(stopNodeList);
+                for (Integer taskId : suspendedNodeList) {
+                    // initialize the pause state
+                    processService.initTaskInstance(processService.findTaskInstanceById(taskId));
+                }
+                cmdParam.put(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING, String.join(",", processService.convertIntListToString(suspendedNodeList)));
+                processInstance.setCommandParam(JSONUtils.toJsonString(cmdParam));
+                processInstance.setRunTimes(runTime + 1);
+                break;
+            case RECOVER_TOLERANCE_FAULT_PROCESS:
+                // recover tolerance fault process
+                processInstance.setRecovery(Flag.YES);
+                break;
+            case COMPLEMENT_DATA:
+                // delete all the valid tasks when complement data
+                List<TaskInstance> taskInstanceList = processService.findValidTaskListByProcessId(processInstance.getId());
+                for (TaskInstance taskInstance : taskInstanceList) {
+                    taskInstance.setFlag(Flag.NO);
+                    processService.updateTaskInstance(taskInstance);
+                }
+                processService.initComplementDataParam(processDefinition, processInstance, cmdParam);
+                break;
+            case REPEAT_RUNNING:
+                // delete the recover task names from command parameter
+                if (cmdParam.containsKey(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING)) {
+                    cmdParam.remove(Constants.CMD_PARAM_RECOVERY_START_NODE_STRING);
+                    processInstance.setCommandParam(JSONUtils.toJsonString(cmdParam));
+                }
+                // delete all the valid tasks when repeat running
+                List<TaskInstance> validTaskList = processService.findValidTaskListByProcessId(processInstance.getId());
+                for (TaskInstance taskInstance : validTaskList) {
+                    taskInstance.setFlag(Flag.NO);
+                    processService.updateTaskInstance(taskInstance);
+                }
+                processInstance.setStartTime(new Date());
+                processInstance.setEndTime(null);
+                processInstance.setRunTimes(runTime + 1);
+                processService.initComplementDataParam(processDefinition, processInstance, cmdParam);
+                break;
+            case SCHEDULER:
+                break;
+            default:
+                break;
         }
     }
 

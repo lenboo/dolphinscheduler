@@ -506,7 +506,7 @@ public final class Constants {
     /**
      * sleep time
      */
-    public static final int SLEEP_TIME_MILLIS = 1000;
+    public static final int SLEEP_TIME_MILLIS = 5;
 
     /**
      * one second mils

@@ -423,6 +423,7 @@ public class ExecutorServiceImpl extends BaseServiceImpl implements ExecutorServ
         }
 
         Command command = new Command();
+        command.setProcessInstanceId(instanceId);
         command.setCommandType(commandType);
         command.setProcessDefinitionCode(processDefinitionCode);
         command.setCommandParam(JSONUtils.toJsonString(cmdParam));

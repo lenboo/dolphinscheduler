@@ -320,6 +320,7 @@ CREATE TABLE `t_ds_command` (
   `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'key',
   `command_type` tinyint(4) DEFAULT NULL COMMENT 'Command type: 0 start workflow, 1 start execution from current node, 2 resume fault-tolerant workflow, 3 resume pause process, 4 start execution from failed node, 5 complement, 6 schedule, 7 rerun, 8 pause, 9 stop, 10 resume waiting thread',
   `process_definition_code` bigint(20) DEFAULT NULL COMMENT 'process definition code',
+  `process_instance_id` int(11) DEFAULT 0 COMMENT 'process instance id',
   `command_param` text COMMENT 'json command parameters',
   `task_depend_type` tinyint(4) DEFAULT NULL COMMENT 'Node dependency type: 0 current node, 1 forward, 2 backward',
   `failure_strategy` tinyint(4) DEFAULT '0' COMMENT 'Failed policy: 0 end, 1 continue',
@@ -413,6 +414,7 @@ CREATE TABLE `t_ds_process_definition` (
   `create_time` datetime NOT NULL COMMENT 'create time',
   `update_time` datetime DEFAULT NULL COMMENT 'update time',
   PRIMARY KEY (`id`,`code`),
+  KEY `process_defintion_code` (`code`),
   UNIQUE KEY `process_unique` (`name`,`project_code`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 
@@ -474,6 +476,7 @@ CREATE TABLE `t_ds_task_definition` (
   `create_time` datetime NOT NULL COMMENT 'create time',
   `update_time` datetime DEFAULT NULL COMMENT 'update time',
   PRIMARY KEY (`id`,`code`),
+  KEY `code` (`code`),
   UNIQUE KEY `task_unique` (`name`,`project_code`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
 

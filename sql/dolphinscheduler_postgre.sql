@@ -242,6 +242,7 @@ CREATE TABLE t_ds_command (
   id int NOT NULL  ,
   command_type int DEFAULT NULL ,
   process_definition_code bigint NOT NULL ,
+  process_instance_id bigint default 0 ,
   command_param text ,
   task_depend_type int DEFAULT NULL ,
   failure_strategy int DEFAULT '0' ,
@@ -334,6 +335,7 @@ CREATE TABLE t_ds_process_definition (
 ) ;
 
 create index process_definition_index on t_ds_process_definition (code,id);
+create index process_definition_index_code on t_ds_process_definition (code);
 
 DROP TABLE IF EXISTS t_ds_process_definition_log;
 CREATE TABLE t_ds_process_definition_log (
@@ -357,6 +359,7 @@ CREATE TABLE t_ds_process_definition_log (
   update_time timestamp DEFAULT NULL ,
   PRIMARY KEY (id)
 ) ;
+create index process_definition_index_code on t_ds_process_definition (code);
 
 DROP TABLE IF EXISTS t_ds_task_definition;
 CREATE TABLE t_ds_task_definition (

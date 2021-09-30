@@ -20,6 +20,7 @@ package org.apache.dolphinscheduler.service.process;
 import static org.apache.dolphinscheduler.common.Constants.CMD_PARAM_RECOVER_PROCESS_ID_STRING;
 import static org.apache.dolphinscheduler.common.Constants.CMD_PARAM_START_PARAMS;
 import static org.apache.dolphinscheduler.common.Constants.CMD_PARAM_SUB_PROCESS_DEFINE_ID;
+
 import static org.mockito.ArgumentMatchers.any;
 
 import org.apache.dolphinscheduler.common.Constants;
@@ -238,15 +239,19 @@ public class ProcessServiceTest {
     @Test
     public void testHandleCommand() {
 
+        int processInstanceId = 111;
+
+        ProcessInstance processInstance = new ProcessInstance();
+        processInstance.setId(processInstanceId);
+        Mockito.when(processService.findProcessInstanceById(processInstanceId)).thenReturn(processInstance);
         //cannot construct process instance, return null;
         String host = "127.0.0.1";
-        int validThreadNum = 1;
         Command command = new Command();
         command.setProcessDefinitionCode(222);
         command.setCommandType(CommandType.REPEAT_RUNNING);
         command.setCommandParam("{\"" + CMD_PARAM_RECOVER_PROCESS_ID_STRING + "\":\"111\",\""
             + CMD_PARAM_SUB_PROCESS_DEFINE_ID + "\":\"222\"}");
-        Assert.assertNull(processService.handleCommand(logger, host, validThreadNum, command));
+        Assert.assertNull(processService.handleCommand(logger, host, command));
 
         //there is not enough thread for this command
         Command command1 = new Command();
@@ -259,7 +264,6 @@ public class ProcessServiceTest {
         processDefinition.setVersion(1);
         processDefinition.setCode(11L);
         processDefinition.setGlobalParams("[{\"prop\":\"startParam1\",\"direct\":\"IN\",\"type\":\"VARCHAR\",\"value\":\"\"}]");
-        ProcessInstance processInstance = new ProcessInstance();
         processInstance.setId(222);
         processInstance.setProcessDefinitionCode(11L);
         processInstance.setProcessDefinitionVersion(1);
@@ -267,26 +271,26 @@ public class ProcessServiceTest {
         Mockito.when(processDefineLogMapper.queryByDefinitionCodeAndVersion(processInstance.getProcessDefinitionCode(),
             processInstance.getProcessDefinitionVersion())).thenReturn(new ProcessDefinitionLog(processDefinition));
         Mockito.when(processInstanceMapper.queryDetailById(222)).thenReturn(processInstance);
-        Assert.assertNotNull(processService.handleCommand(logger, host, validThreadNum, command1));
+        Assert.assertNotNull(processService.handleCommand(logger, host, command1));
 
         Command command2 = new Command();
         command2.setCommandParam("{\"ProcessInstanceId\":222,\"StartNodeIdList\":\"n1,n2\"}");
         command2.setProcessDefinitionCode(123);
         command2.setCommandType(CommandType.RECOVER_SUSPENDED_PROCESS);
 
-        Assert.assertNotNull(processService.handleCommand(logger, host, validThreadNum, command2));
+        Assert.assertNotNull(processService.handleCommand(logger, host, command2));
 
         Command command3 = new Command();
         command3.setProcessDefinitionCode(123);
         command3.setCommandParam("{\"WaitingThreadInstanceId\":222}");
         command3.setCommandType(CommandType.START_FAILURE_TASK_PROCESS);
-        Assert.assertNotNull(processService.handleCommand(logger, host, validThreadNum, command3));
+        Assert.assertNotNull(processService.handleCommand(logger, host, command3));
 
         Command command4 = new Command();
         command4.setProcessDefinitionCode(123);
         command4.setCommandParam("{\"WaitingThreadInstanceId\":222,\"StartNodeIdList\":\"n1,n2\"}");
         command4.setCommandType(CommandType.REPEAT_RUNNING);
-        Assert.assertNotNull(processService.handleCommand(logger, host, validThreadNum, command4));
+        Assert.assertNotNull(processService.handleCommand(logger, host, command4));
 
         Command command5 = new Command();
         command5.setProcessDefinitionCode(123);
@@ -297,7 +301,7 @@ public class ProcessServiceTest {
         command5.setCommandParam(JSONUtils.toJsonString(commandParams));
         command5.setCommandType(CommandType.START_PROCESS);
         command5.setDryRun(Constants.DRY_RUN_FLAG_NO);
-        ProcessInstance processInstance1 = processService.handleCommand(logger, host, validThreadNum, command5);
+        ProcessInstance processInstance1 = processService.handleCommand(logger, host, command5);
         Assert.assertTrue(processInstance1.getGlobalParams().contains("\"testStartParam1\""));
     }
 

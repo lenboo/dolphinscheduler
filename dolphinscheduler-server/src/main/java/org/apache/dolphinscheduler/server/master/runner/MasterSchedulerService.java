@@ -164,16 +164,15 @@ public class MasterSchedulerService extends Thread {
      * @throws Exception
      */
     private void scheduleProcess() throws Exception {
-
-        int activeCount = masterExecService.getActiveCount();
         // make sure to scan and delete command  table in one transaction
+        logger.info("start find command...!!");
         Command command = findOneCommand();
         if (command != null) {
-            logger.info("find one command: id: {}, type: {}", command.getId(), command.getCommandType());
+            logger.info("find one command: id: {}, type: {} ...!!", command.getId(), command.getCommandType());
             try {
                 ProcessInstance processInstance = processService.handleCommand(logger,
                         getLocalAddress(),
-                        this.masterConfig.getMasterExecThreads() - activeCount, command);
+                        command);
                 if (processInstance != null) {
                     WorkflowExecuteThread workflowExecuteThread = new WorkflowExecuteThread(
                             processInstance
@@ -187,7 +186,7 @@ public class MasterSchedulerService extends Thread {
                     if (processInstance.getTimeout() > 0) {
                         this.processTimeoutCheckList.put(processInstance.getId(), processInstance);
                     }
-                    logger.info("handle command end, command {} process {} start...",
+                    logger.info("handle command end, command {} process {} start...!!",
                             command.getId(), processInstance.getId());
                     masterExecService.execute(workflowExecuteThread);
                 }
