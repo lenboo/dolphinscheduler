@@ -165,7 +165,6 @@ public class MasterSchedulerService extends Thread {
      */
     private void scheduleProcess() throws Exception {
         // make sure to scan and delete command  table in one transaction
-        logger.info("start find command...!!");
         Command command = findOneCommand();
         if (command != null) {
             logger.info("find one command: id: {}, type: {} ...!!", command.getId(), command.getCommandType());
