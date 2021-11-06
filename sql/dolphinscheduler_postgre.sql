@@ -302,6 +302,7 @@ CREATE TABLE t_ds_error_command (
   worker_group              varchar(64),
   environment_code          bigint DEFAULT '-1',
   dry_run                   int DEFAULT '0' ,
+  message                   text ,
   process_instance_id       int DEFAULT 0,
   process_definition_version int DEFAULT 0,
   PRIMARY KEY (id)
@@ -319,7 +320,7 @@ CREATE TABLE t_ds_process_definition (
   id int NOT NULL  ,
   code bigint NOT NULL,
   name varchar(255) DEFAULT NULL ,
-  version int DEFAULT NULL ,
+  version int NOT NULL ,
   description text ,
   project_code bigint DEFAULT NULL ,
   release_state int DEFAULT NULL ,
@@ -343,7 +344,7 @@ CREATE TABLE t_ds_process_definition_log (
   id int NOT NULL  ,
   code bigint NOT NULL,
   name varchar(255) DEFAULT NULL ,
-  version int DEFAULT NULL ,
+  version int NOT NULL ,
   description text ,
   project_code bigint DEFAULT NULL ,
   release_state int DEFAULT NULL ,
@@ -366,7 +367,7 @@ CREATE TABLE t_ds_task_definition (
   id int NOT NULL  ,
   code bigint NOT NULL,
   name varchar(255) DEFAULT NULL ,
-  version int DEFAULT NULL ,
+  version int NOT NULL ,
   description text ,
   project_code bigint DEFAULT NULL ,
   user_id int DEFAULT NULL ,
@@ -385,8 +386,7 @@ CREATE TABLE t_ds_task_definition (
   resource_ids text ,
   create_time timestamp DEFAULT NULL ,
   update_time timestamp DEFAULT NULL ,
-  PRIMARY KEY (id) ,
-  CONSTRAINT task_definition_unique UNIQUE (name, project_code)
+  PRIMARY KEY (id)
 ) ;
 
 create index task_definition_index on t_ds_task_definition (project_code,id);
@@ -396,7 +396,7 @@ CREATE TABLE t_ds_task_definition_log (
   id int NOT NULL  ,
   code bigint NOT NULL,
   name varchar(255) DEFAULT NULL ,
-  version int DEFAULT NULL ,
+  version int NOT NULL ,
   description text ,
   project_code bigint DEFAULT NULL ,
   user_id int DEFAULT NULL ,
@@ -424,9 +424,9 @@ DROP TABLE IF EXISTS t_ds_process_task_relation;
 CREATE TABLE t_ds_process_task_relation (
   id int NOT NULL  ,
   name varchar(255) DEFAULT NULL ,
-  process_definition_version int DEFAULT NULL ,
   project_code bigint DEFAULT NULL ,
   process_definition_code bigint DEFAULT NULL ,
+  process_definition_version int DEFAULT NULL ,
   pre_task_code bigint DEFAULT NULL ,
   pre_task_version int DEFAULT '0' ,
   post_task_code bigint DEFAULT NULL ,
@@ -442,9 +442,9 @@ DROP TABLE IF EXISTS t_ds_process_task_relation_log;
 CREATE TABLE t_ds_process_task_relation_log (
   id int NOT NULL  ,
   name varchar(255) DEFAULT NULL ,
-  process_definition_version int DEFAULT NULL ,
   project_code bigint DEFAULT NULL ,
   process_definition_code bigint DEFAULT NULL ,
+  process_definition_version int DEFAULT NULL ,
   pre_task_code bigint DEFAULT NULL ,
   pre_task_version int DEFAULT '0' ,
   post_task_code bigint DEFAULT NULL ,
@@ -466,8 +466,8 @@ DROP TABLE IF EXISTS t_ds_process_instance;
 CREATE TABLE t_ds_process_instance (
   id int NOT NULL  ,
   name varchar(255) DEFAULT NULL ,
-  process_definition_version int DEFAULT NULL ,
   process_definition_code bigint DEFAULT NULL ,
+  process_definition_version int DEFAULT NULL ,
   state int DEFAULT NULL ,
   recovery int DEFAULT NULL ,
   start_time timestamp DEFAULT NULL ,
