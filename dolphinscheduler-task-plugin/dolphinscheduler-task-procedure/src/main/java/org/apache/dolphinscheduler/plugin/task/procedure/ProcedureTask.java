@@ -106,18 +106,16 @@ public class ProcedureTask extends AbstractTaskExecutor {
 
             // get jdbc connection
             connection = DataSourceClientProvider.getInstance().getConnection(dbType, connectionParam);
-
-            // combining local and global parameters
-            Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
-
+            Map<Integer, Property> sqlParamsMap = new HashMap<>();
+            String proceduerSql  = formatSql(sqlParamsMap);
             // call method
-            stmt = connection.prepareCall(procedureParameters.getMethod());
+            stmt = connection.prepareCall(proceduerSql);
 
             // set timeout
             setTimeout(stmt);
 
             // outParameterMap
-            Map<Integer, Property> outParameterMap = getOutParameterMap(stmt, paramsMap);
+            Map<Integer, Property> outParameterMap = getOutParameterMap(stmt, sqlParamsMap);
 
             stmt.executeUpdate();
 
@@ -132,6 +130,13 @@ public class ProcedureTask extends AbstractTaskExecutor {
         } finally {
             close(stmt, connection);
         }
+    }
+
+    private String formatSql(Map<Integer, Property> sqlParamsMap) {
+        // combining local and global parameters
+        Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
+        setSqlParamsMap(procedureParameters.getMethod(), rgex, sqlParamsMap, paramsMap,taskExecutionContext.getTaskInstanceId());
+        return procedureParameters.getMethod().replaceAll(rgex, "?");
     }
 
     /**
@@ -161,7 +166,7 @@ public class ProcedureTask extends AbstractTaskExecutor {
      * @return outParameterMap
      * @throws Exception Exception
      */
-    private Map<Integer, Property> getOutParameterMap(CallableStatement stmt, Map<String, Property> paramsMap) throws Exception {
+    private Map<Integer, Property> getOutParameterMap(CallableStatement stmt, Map<Integer, Property> paramsMap) throws Exception {
         Map<Integer, Property> outParameterMap = new HashMap<>();
         if (procedureParameters.getLocalParametersMap() == null) {
             return outParameterMap;
@@ -172,7 +177,12 @@ public class ProcedureTask extends AbstractTaskExecutor {
         if (CollectionUtils.isEmpty(userDefParamsList)) {
             return outParameterMap;
         }
-
+        if (paramsMap != null) {
+            for (Map.Entry<Integer, Property> entry : paramsMap.entrySet()) {
+                Property prop = entry.getValue();
+                ParameterUtils.setInParameter(entry.getKey(), stmt, prop.getType(), prop.getValue());
+            }
+        }
         int index = 1;
         for (Property property : userDefParamsList) {
             logger.info("localParams : prop : {} , dirct : {} , type : {} , value : {}"
@@ -181,9 +191,7 @@ public class ProcedureTask extends AbstractTaskExecutor {
                     property.getType(),
                     property.getValue());
             // set parameters
-            if (property.getDirect().equals(Direct.IN)) {
-                ParameterUtils.setInParameter(index, stmt, property.getType(), paramsMap.get(property.getProp()).getValue());
-            } else if (property.getDirect().equals(Direct.OUT)) {
+            if (property.getDirect().equals(Direct.OUT)) {
                 setOutParameter(index, stmt, property.getType(), paramsMap.get(property.getProp()).getValue());
                 property.setValue(paramsMap.get(property.getProp()).getValue());
                 outParameterMap.put(index, property);
