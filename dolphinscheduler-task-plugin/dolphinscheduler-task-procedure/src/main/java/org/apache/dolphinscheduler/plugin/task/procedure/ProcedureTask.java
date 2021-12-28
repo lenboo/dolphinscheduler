@@ -17,10 +17,7 @@
 
 package org.apache.dolphinscheduler.plugin.task.procedure;
 
-import static org.apache.dolphinscheduler.spi.task.TaskConstants.EXIT_CODE_FAILURE;
-import static org.apache.dolphinscheduler.spi.task.TaskConstants.EXIT_CODE_SUCCESS;
-import static org.apache.dolphinscheduler.spi.task.TaskConstants.TASK_LOG_INFO_FORMAT;
-
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.dolphinscheduler.plugin.datasource.api.plugin.DataSourceClientProvider;
 import org.apache.dolphinscheduler.plugin.datasource.api.utils.DatasourceUtil;
 import org.apache.dolphinscheduler.plugin.task.api.AbstractTaskExecutor;
@@ -37,8 +34,6 @@ import org.apache.dolphinscheduler.spi.task.request.TaskRequest;
 import org.apache.dolphinscheduler.spi.utils.JSONUtils;
 import org.apache.dolphinscheduler.spi.utils.StringUtils;
 
-import org.apache.commons.collections4.CollectionUtils;
-
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -47,6 +42,10 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.apache.dolphinscheduler.spi.task.TaskConstants.EXIT_CODE_FAILURE;
+import static org.apache.dolphinscheduler.spi.task.TaskConstants.EXIT_CODE_SUCCESS;
+import static org.apache.dolphinscheduler.spi.task.TaskConstants.TASK_LOG_INFO_FORMAT;
 
 /**
  * procedure task
@@ -107,7 +106,8 @@ public class ProcedureTask extends AbstractTaskExecutor {
             // get jdbc connection
             connection = DataSourceClientProvider.getInstance().getConnection(dbType, connectionParam);
             Map<Integer, Property> sqlParamsMap = new HashMap<>();
-            String proceduerSql  = formatSql(sqlParamsMap);
+            Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
+            String proceduerSql  = formatSql(sqlParamsMap,paramsMap);
             // call method
             stmt = connection.prepareCall(proceduerSql);
 
@@ -115,7 +115,7 @@ public class ProcedureTask extends AbstractTaskExecutor {
             setTimeout(stmt);
 
             // outParameterMap
-            Map<Integer, Property> outParameterMap = getOutParameterMap(stmt, sqlParamsMap);
+            Map<Integer, Property> outParameterMap = getOutParameterMap(stmt, sqlParamsMap,paramsMap);
 
             stmt.executeUpdate();
 
@@ -132,9 +132,8 @@ public class ProcedureTask extends AbstractTaskExecutor {
         }
     }
 
-    private String formatSql(Map<Integer, Property> sqlParamsMap) {
+    private String formatSql(Map<Integer, Property> sqlParamsMap,Map<String, Property> paramsMap ) {
         // combining local and global parameters
-        Map<String, Property> paramsMap = ParamUtils.convert(taskExecutionContext,getParameters());
         setSqlParamsMap(procedureParameters.getMethod(), rgex, sqlParamsMap, paramsMap,taskExecutionContext.getTaskInstanceId());
         return procedureParameters.getMethod().replaceAll(rgex, "?");
     }
@@ -154,7 +153,7 @@ public class ProcedureTask extends AbstractTaskExecutor {
             String prop = property.getProp();
             DataType dataType = property.getType();
             // get output parameter
-            getOutputParameter(stmt, index, prop, dataType);
+            procedureParameters.dealOutParam4Procedure(getOutputParameter(stmt, index, prop, dataType),prop);
         }
     }
 
@@ -166,7 +165,8 @@ public class ProcedureTask extends AbstractTaskExecutor {
      * @return outParameterMap
      * @throws Exception Exception
      */
-    private Map<Integer, Property> getOutParameterMap(CallableStatement stmt, Map<Integer, Property> paramsMap) throws Exception {
+    private Map<Integer, Property> getOutParameterMap(CallableStatement stmt, Map<Integer, Property> paramsMap
+            ,Map<String, Property> totalParamsMap) throws Exception {
         Map<Integer, Property> outParameterMap = new HashMap<>();
         if (procedureParameters.getLocalParametersMap() == null) {
             return outParameterMap;
@@ -192,8 +192,8 @@ public class ProcedureTask extends AbstractTaskExecutor {
                     property.getValue());
             // set parameters
             if (property.getDirect().equals(Direct.OUT)) {
-                setOutParameter(index, stmt, property.getType(), paramsMap.get(property.getProp()).getValue());
-                property.setValue(paramsMap.get(property.getProp()).getValue());
+                setOutParameter(index, stmt, property.getType(), totalParamsMap.get(property.getProp()).getValue());
+//                property.setValue(totalParamsMap.get(property.getProp()).getValue());
                 outParameterMap.put(index, property);
             }
             index++;
@@ -247,38 +247,49 @@ public class ProcedureTask extends AbstractTaskExecutor {
      * @param dataType dataType
      * @throws SQLException SQLException
      */
-    private void getOutputParameter(CallableStatement stmt, int index, String prop, DataType dataType) throws SQLException {
+    private Object getOutputParameter(CallableStatement stmt, int index, String prop, DataType dataType) throws SQLException {
+        Object value = null;
         switch (dataType) {
             case VARCHAR:
                 logger.info("out prameter varchar key : {} , value : {}", prop, stmt.getString(index));
+                value = stmt.getString(index);
                 break;
             case INTEGER:
                 logger.info("out prameter integer key : {} , value : {}", prop, stmt.getInt(index));
+                value = stmt.getInt(index);
                 break;
             case LONG:
                 logger.info("out prameter long key : {} , value : {}", prop, stmt.getLong(index));
+                value = stmt.getLong(index);
                 break;
             case FLOAT:
                 logger.info("out prameter float key : {} , value : {}", prop, stmt.getFloat(index));
+                value = stmt.getFloat(index);
                 break;
             case DOUBLE:
                 logger.info("out prameter double key : {} , value : {}", prop, stmt.getDouble(index));
+                value = stmt.getDouble(index);
                 break;
             case DATE:
                 logger.info("out prameter date key : {} , value : {}", prop, stmt.getDate(index));
+                value = stmt.getDate(index);
                 break;
             case TIME:
                 logger.info("out prameter time key : {} , value : {}", prop, stmt.getTime(index));
+                value = stmt.getTime(index);
                 break;
             case TIMESTAMP:
                 logger.info("out prameter timestamp key : {} , value : {}", prop, stmt.getTimestamp(index));
+                value = stmt.getTimestamp(index);
                 break;
             case BOOLEAN:
                 logger.info("out prameter boolean key : {} , value : {}", prop, stmt.getBoolean(index));
+                value = stmt.getBoolean(index);
                 break;
             default:
                 break;
         }
+        return value;
     }
 
     @Override
